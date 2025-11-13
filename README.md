@@ -1,73 +1,221 @@
-# Welcome to your Lovable project
+# LinguaLearn
 
-## Project info
+A full-stack language learning platform that combines spaced repetition, interactive lessons, and progress tracking. The frontend is built with Vite, React, TypeScript, Tailwind CSS, and shadcn/ui. Supabase provides authentication, database, and real-time services.
 
-**URL**: https://lovable.dev/projects/9012fae2-13a4-4d5b-92ec-c21b2a5f1b6f
+---
 
-## How can I edit this code?
+## Table of Contents
+- [Key Features](#key-features)
+- [Tech Stack](#tech-stack)
+- [Application Walkthrough](#application-walkthrough)
+- [Supabase Data Model](#supabase-data-model)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Local Development](#local-development)
+- [Environment Configuration](#environment-configuration)
+- [Available Scripts](#available-scripts)
+- [Styling System](#styling-system)
+- [Extending the Platform](#extending-the-platform)
+- [Troubleshooting](#troubleshooting)
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## Key Features
+- **Email/password authentication** via Supabase with protected routing and persistent sessions.
+- **Course catalog** that loads available language courses from Supabase and navigates learners into lesson collections.
+- **Lesson browser** with gating logic to lock later lessons until earlier content is completed.
+- **Interactive lesson player** that supports multiple choice, fill-in-the-blank, and translation tasks, validates answers, awards XP, and persists attempt history.
+- **Spaced repetition review** queue (SM-2 inspired) that surfaces due items from previous lessons on the daily review screen.
+- **Personal profile dashboard** showing XP, streaks, lesson completion stats, and placeholder achievements.
+- **Admin landing page** highlighting areas for course, lesson, exercise, and analytics management.
+- **Toast notifications** (radix + shadcn) for feedback during authentication and lesson completion.
+- **Responsive UI** built with Tailwind CSS, shadcn/ui primitives, and custom gradients/icons for a playful brand.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/9012fae2-13a4-4d5b-92ec-c21b2a5f1b6f) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## Tech Stack
+- **Framework:** React 18, Vite 5 with SWC, TypeScript
+- **Routing:** React Router v6
+- **Data Fetching / Caching:** TanStack Query
+- **Forms & Validation:** React Hook Form, Zod (available), shadcn/ui form components
+- **Styling:** Tailwind CSS, tailwind-merge, class-variance-authority
+- **UI Toolkit:** shadcn/ui (Radix UI bindings), lucide-react icons
+- **Notifications:** Radix Toast + Sonner
+- **Auth & Backend:** Supabase (Auth, Postgres, row-level security)
+- **Charts & Visuals:** Recharts (included for future analytics)
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Application Walkthrough
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Authentication (`/auth`)
+- Email/password sign-up with redirect back to the app (`Auth.tsx`).
+- Sign-in form, validation, loading state, and error handling via toast notifications.
 
-Follow these steps:
+### Protected Experiences
+- `ProtectedRoute.tsx` subscribes to Supabase auth state, shows a loader while determining the current session, and redirects unauthenticated users to `/auth`.
+- All main routes—home, courses, lessons, review, profile, admin—sit behind this guard.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Home Dashboard (`/`)
+- Fetches the learner profile (XP, streak) from `profiles`.
+- Highlights key stats and offers quick actions for Courses, Profile, and Daily Review.
+- Encourages users to maintain streaks and earn XP via a daily goal card.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Courses (`/courses`)
+- Loads all `courses` from Supabase and renders them as tappable cards with flag emojis (language pairs).
+- Navigates to the lesson list for the selected course.
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Lessons (`/courses/:courseId/lessons`)
+- Retrieves course metadata and associated `lessons`.
+- Displays progress, gating logic (first lesson unlocked by default), and a Start button that routes into the lesson player.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### Lesson Player (`/lesson/:lessonId`)
+- Fetches all `items` (exercise prompts) for the lesson.
+- Supports:
+  - Multiple-choice questions (`MultipleChoiceExercise.tsx`)
+  - Translation input (`TranslateExercise.tsx`)
+  - Fill-in-the-blank word banks (`FillBlankExercise.tsx`)
+- Normalizes answers to improve matching, records attempts, awards XP, updates `user_progress`, and increments the learner’s XP in `profiles`.
+- Displays feedback modules, explanation slots, and a progress bar. On completion, the user is redirected home with a toast summary.
+
+### Daily Review (`/review`)
+- Uses the `user_item_state` table (SM-2 algorithm fields) to surface items whose `next_due` timestamp is elapsed.
+- Summarizes the queue, offers a start button placeholder, and encourages further learning when the queue is empty.
+
+### Profile (`/profile`)
+- Shows learner avatar/identity (email), lifetime XP, streak, completed lessons, and placeholders for achievements.
+- Pulls aggregate statistics from `user_progress`.
+
+### Admin (`/admin`)
+- Landing area for course, lesson, exercise, and analytics management (buttons currently placeholders).
+- Quick stats highlights seeded counts and summarises available admin capabilities.
+
+---
+
+## Supabase Data Model
+The migration in `supabase/migrations/20251113121117_2c8fc2c2-5253-435f-8f9d-798e36c15ca7.sql` provisions the core schema:
+
+- `profiles`: mirrors `auth.users`, tracks XP, streaks, timestamps.
+- `courses`: language pair catalog with title, description, emoji flag.
+- `lessons`: ordered lesson metadata tied to courses.
+- `items`: exercise prompts with typed content (`multiple_choice`, `fill_blank`, `translate`, etc.), JSON options, audio URLs, explanations.
+- `user_item_state`: spaced-repetition metadata (ease factor, interval, repetitions, due dates).
+- `exercise_attempts`: per-item attempt history with correctness and score.
+- `user_progress`: lesson-level completion records and XP totals.
+
+Every table has row-level security policies restricting access to the owning user where appropriate.
+
+---
+
+## Project Structure
+
+```text
+src/
+├─ components/
+│  ├─ exercises/            # Exercise UIs (multiple choice, fill blank, translation)
+│  ├─ ui/                   # shadcn/ui component library
+│  └─ ProtectedRoute.tsx    # Auth guard
+├─ hooks/                   # Reusable hooks (toast helpers, mobile detection)
+├─ integrations/
+│  └─ supabase/             # Supabase client (generated)
+├─ lib/                     # Utilities (formatters, helpers)
+├─ pages/                   # Route-level screens (Auth, Home, Courses, Lessons, etc.)
+├─ App.tsx                  # Router setup, providers
+└─ main.tsx                 # Vite entry point
 ```
 
-**Edit a file directly in GitHub**
+Supporting config lives at the repository root (`vite.config.ts`, `tailwind.config.ts`, `tsconfig*.json`, `eslint.config.js`, etc.).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Prerequisites
+- Node.js ≥ 18 (LTS recommended)
+- npm ≥ 9 (or pnpm/bun if preferred)
+- Supabase project with:
+  - Auth enabled (email/password)
+  - Matching SQL schema (apply the migration)
+  - Service role or SQL access to seed data (optional for local testing)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## Local Development
 
-This project is built with:
+1. **Install dependencies**
+   ```sh
+   npm install
+   ```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+2. **Configure environment variables** (see [Environment Configuration](#environment-configuration)).
 
-## How can I deploy this project?
+3. **Run the development server**
+   ```sh
+   npm run dev
+   ```
 
-Simply open [Lovable](https://lovable.dev/projects/9012fae2-13a4-4d5b-92ec-c21b2a5f1b6f) and click on Share -> Publish.
+4. Visit `http://localhost:5173` to explore the app. The Vite dev server auto-reloads on changes.
 
-## Can I connect a custom domain to my Lovable project?
+### Using pnpm or bun
+```sh
+pnpm install
+pnpm dev
+# or
+bun install
+bun run dev
+```
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Environment Configuration
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Create a `.env` file at the repository root (Vite automatically loads `.env`, `.env.local`, etc.). Required variables:
+
+| Variable | Description |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public API key |
+
+Optional: Configure additional Supabase or feature flags as needed (e.g., storage buckets, analytics endpoints).
+
+> **Security note:** The publishable key is safe for client distribution, but never commit service-role keys or secrets to the repo.
+
+---
+
+## Available Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Create a production build in `dist/` |
+| `npm run build:dev` | Production build with development mode (useful for staging) |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint across the project |
+
+---
+
+## Styling System
+- Tailwind CSS utilities with project-specific tokens defined in `tailwind.config.ts`.
+- shadcn/ui components live in `src/components/ui` and can be extended with the shadcn CLI (see `components.json`).
+- `App.css` and `index.css` host global resets, root variables, and layout utilities.
+
+When creating new UI elements, prefer cloning or extending existing shadcn primitives to retain consistent styling and motion.
+
+---
+
+## Extending the Platform
+- **Add exercise types:** Extend `items.type` enum in Supabase, create matching components in `src/components/exercises/`, and render them inside `LessonPlayer`.
+- **Track more analytics:** Leverage TanStack Query for new Supabase RPCs, surface results in the Admin area, and visualize with Recharts (already installed).
+- **Improve lesson gating:** Replace the placeholder logic in `Lessons.tsx` with progress-based unlocking using `user_progress`.
+- **Enhance review sessions:** Build a dedicated flow for reviewing `user_item_state` entries, including rating buttons to update SM-2 fields server-side.
+- **Localization:** Tailwind + React supports multi-language UI; consider storing UI strings in JSON or using a library like i18next.
+
+---
+
+## Troubleshooting
+- **Authentication loops:** Ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are correct and that your Supabase project allows email/password sign-ins.
+- **CORS or network errors:** Supabase policies must grant read access for public tables (`courses`, `lessons`, `items`). Double-check row-level security policies.
+- **Schema drift:** Re-run the migration SQL or use Supabase Studio to confirm table definitions. Missing columns will surface as runtime errors in React Query logs.
+- **Styling issues after adding components:** Run `npm run lint` and verify new components use Tailwind classes consistent with the design tokens.
+
+---
+
+Happy building, and enjoy leveling up your language skills with LinguaLearn! 🎓🦉
