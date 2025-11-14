@@ -21,11 +21,20 @@ interface Item {
   order_index: number;
 }
 
+interface Lesson {
+  id: string;
+  title: string;
+  course: {
+    language_to: string;
+  };
+}
+
 const LessonPlayer = () => {
   const { lessonId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [items, setItems] = useState<Item[]>([]);
+  const [lesson, setLesson] = useState<Lesson | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answer, setAnswer] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
@@ -34,27 +43,42 @@ const LessonPlayer = () => {
   const [xpEarned, setXpEarned] = useState(0);
 
   useEffect(() => {
-    loadItems();
+    loadLessonAndItems();
   }, [lessonId]);
 
-  const loadItems = async () => {
+  const loadLessonAndItems = async () => {
     try {
-      const { data, error } = await supabase
+      // Load lesson with course info
+      const { data: lessonData, error: lessonError } = await supabase
+        .from("lessons")
+        .select(`
+          id,
+          title,
+          course:courses(language_to)
+        `)
+        .eq("id", lessonId)
+        .single();
+
+      if (lessonError) throw lessonError;
+      setLesson(lessonData as any);
+
+      // Load items
+      const { data: itemsData, error: itemsError } = await supabase
         .from("items")
         .select("*")
         .eq("lesson_id", lessonId)
         .order("order_index", { ascending: true });
 
-      if (error) throw error;
+      if (itemsError) throw itemsError;
       
-      const parsedItems = (data || []).map(item => ({
+      const parsedItems = (itemsData || []).map(item => ({
         ...item,
         options: item.options ? (typeof item.options === 'string' ? JSON.parse(item.options) : item.options) : null
       }));
       
       setItems(parsedItems);
     } catch (error) {
-      console.error("Error loading items:", error);
+      console.error("Error loading lesson and items:", error);
     } finally {
       setLoading(false);
     }
@@ -176,34 +200,38 @@ const LessonPlayer = () => {
         <Card className="border-2 shadow-lg">
           <CardContent className="p-8">
             <div className="mb-8">
-              <h2 className="text-2xl font-bold mb-4">{currentItem.question}</h2>
-              
               {currentItem.type === "multiple_choice" && (
                 <MultipleChoiceExercise
+                  question={currentItem.question}
                   options={currentItem.options || []}
                   selectedAnswer={answer}
                   onSelect={setAnswer}
                   showFeedback={showFeedback}
                   correctAnswer={currentItem.correct_answer}
+                  languageTo={lesson?.course?.language_to}
                 />
               )}
 
               {currentItem.type === "translate" && (
                 <TranslateExercise
+                  question={currentItem.question}
                   answer={answer}
                   onChange={setAnswer}
                   showFeedback={showFeedback}
                   isCorrect={isCorrect}
+                  languageTo={lesson?.course?.language_to}
                 />
               )}
 
               {currentItem.type === "fill_blank" && (
                 <FillBlankExercise
+                  question={currentItem.question}
                   options={currentItem.options || []}
                   selectedAnswer={answer}
                   onSelect={setAnswer}
                   showFeedback={showFeedback}
                   correctAnswer={currentItem.correct_answer}
+                  languageTo={lesson?.course?.language_to}
                 />
               )}
             </div>
