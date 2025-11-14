@@ -13,6 +13,7 @@ import Profile from "./pages/Profile";
 import DailyReview from "./pages/DailyReview";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import Playlists from "./pages/Playlists";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <DailyReview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/playlists"
+            element={
+              <ProtectedRoute>
+                <Playlists />
               </ProtectedRoute>
             }
           />

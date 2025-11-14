@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Volume2, Mic, X, Check } from "lucide-react";
+import { X, Check, Lightbulb } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MultipleChoiceExercise from "@/components/exercises/MultipleChoiceExercise";
 import TranslateExercise from "@/components/exercises/TranslateExercise";
@@ -15,9 +15,10 @@ interface Item {
   type: string;
   question: string;
   correct_answer: string;
-  options: any;
+  options: string[] | null;
   audio_url: string | null;
   explanation: string | null;
+  hint?: string | null;
   order_index: number;
 }
 
@@ -41,12 +42,9 @@ const LessonPlayer = () => {
   const [isCorrect, setIsCorrect] = useState(false);
   const [loading, setLoading] = useState(true);
   const [xpEarned, setXpEarned] = useState(0);
+  const [showHint, setShowHint] = useState(false);
 
-  useEffect(() => {
-    loadLessonAndItems();
-  }, [lessonId]);
-
-  const loadLessonAndItems = async () => {
+  const loadLessonAndItems = useCallback(async () => {
     try {
       // Load lesson with course info
       const { data: lessonData, error: lessonError } = await supabase
@@ -73,7 +71,11 @@ const LessonPlayer = () => {
       
       const parsedItems = (itemsData || []).map(item => ({
         ...item,
-        options: item.options ? (typeof item.options === 'string' ? JSON.parse(item.options) : item.options) : null
+        options: item.options
+          ? typeof item.options === "string"
+            ? (JSON.parse(item.options) as string[])
+            : (item.options as string[])
+          : null,
       }));
       
       setItems(parsedItems);
@@ -82,10 +84,14 @@ const LessonPlayer = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [lessonId]);
+
+  useEffect(() => {
+    loadLessonAndItems();
+  }, [loadLessonAndItems]);
 
   const normalizeAnswer = (text: string) => {
-    return text.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
+    return text.toLowerCase().trim().replace(/[-.,/#!$%^&*;:{}=_`~()]/g, "");
   };
 
   const checkAnswer = async () => {
@@ -121,6 +127,7 @@ const LessonPlayer = () => {
       setAnswer("");
       setShowFeedback(false);
       setIsCorrect(false);
+      setShowHint(false);
     } else {
       completeLesson();
     }
@@ -199,7 +206,29 @@ const LessonPlayer = () => {
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Card className="border-2 shadow-lg">
           <CardContent className="p-8">
-            <div className="mb-8">
+            <div className="mb-8 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="text-2xl font-bold">{currentItem.question}</h2>
+                {currentItem.hint && !showHint && !showFeedback && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => setShowHint(true)}
+                  >
+                    <Lightbulb className="w-4 h-4" />
+                    Hint
+                  </Button>
+                )}
+              </div>
+
+              {showHint && currentItem.hint && (
+                <div className="p-4 border rounded-lg bg-muted/30 flex items-start gap-3">
+                  <Lightbulb className="w-5 h-5 text-primary shrink-0" />
+                  <p className="text-sm text-muted-foreground">{currentItem.hint}</p>
+                </div>
+              )}
+
               {currentItem.type === "multiple_choice" && (
                 <MultipleChoiceExercise
                   question={currentItem.question}
