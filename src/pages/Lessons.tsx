@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Lock, CheckCircle2, Circle } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Circle, Info } from "lucide-react";
 
 interface Lesson {
   id: string;
@@ -22,39 +22,72 @@ const Lessons = () => {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [course, setCourse] = useState<Course | null>(null);
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+  const [profileXp, setProfileXp] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, [courseId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      // Load course
-      const { data: courseData, error: courseError } = await supabase
-        .from("courses")
-        .select("title, flag_emoji")
-        .eq("id", courseId)
-        .single();
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (courseError) throw courseError;
-      setCourse(courseData);
+      const [courseRes, lessonsRes, profileRes, progressRes] = await Promise.all([
+        supabase
+          .from("courses")
+          .select("title, flag_emoji")
+          .eq("id", courseId)
+          .single(),
+        supabase
+          .from("lessons")
+          .select("*")
+          .eq("course_id", courseId)
+          .order("order_index", { ascending: true }),
+        user
+          ? supabase
+              .from("profiles")
+              .select("xp")
+              .eq("id", user.id)
+              .single()
+          : Promise.resolve({ data: { xp: 0 } }),
+        user
+          ? supabase
+              .from("user_progress")
+              .select("lesson_id, completed")
+              .eq("user_id", user.id)
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      // Load lessons
-      const { data: lessonsData, error: lessonsError } = await supabase
-        .from("lessons")
-        .select("*")
-        .eq("course_id", courseId)
-        .order("order_index", { ascending: true });
+      if (courseRes.error) throw courseRes.error;
+      if (lessonsRes.error) throw lessonsRes.error;
+      if (profileRes.error) throw profileRes.error;
+      if (progressRes.error) throw progressRes.error;
 
-      if (lessonsError) throw lessonsError;
-      setLessons(lessonsData || []);
+      setCourse(courseRes.data);
+      setLessons(lessonsRes.data || []);
+      setProfileXp(profileRes.data?.xp ?? 0);
+
+      const completedSet = new Set(
+        progressRes.data
+          ?.filter((record) => record.completed)
+          .map((record) => record.lesson_id) ?? []
+      );
+      setCompletedLessons(completedSet);
     } catch (error) {
       console.error("Error loading lessons:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const completedCount = useMemo(
+    () => lessons.filter((lesson) => completedLessons.has(lesson.id)).length,
+    [lessons, completedLessons]
+  );
+
+  const progressValue = lessons.length ? (completedCount / lessons.length) * 100 : 0;
 
   if (loading) {
     return (
@@ -81,14 +114,19 @@ const Lessons = () => {
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Your Progress</h2>
-          <Progress value={0} className="h-3" />
-          <p className="text-sm text-muted-foreground mt-2">0 of {lessons.length} lessons completed</p>
+          <Progress value={progressValue} className="h-3" />
+          <p className="text-sm text-muted-foreground mt-2">
+            {completedCount} of {lessons.length} lessons completed · {Math.round(progressValue)}%
+          </p>
         </div>
 
         <div className="space-y-4">
           {lessons.map((lesson, index) => {
-            const isUnlocked = index === 0; // For now, only first lesson is unlocked
-            const isCompleted = false;
+            const isCompleted = completedLessons.has(lesson.id);
+            const previousLessonCompleted = index === 0 ? true : completedLessons.has(lessons[index - 1].id);
+            const xpRequirement = Math.max(0, (lesson.order_index - 1) * 20);
+            const meetsXpRequirement = profileXp >= xpRequirement;
+            const isUnlocked = isCompleted || (previousLessonCompleted && meetsXpRequirement);
 
             return (
               <Card
@@ -125,11 +163,23 @@ const Lessons = () => {
                         <p className="text-muted-foreground">{lesson.title}</p>
                       </div>
                     </div>
-                    {isUnlocked && (
-                      <Button className="rounded-full">
-                        {isCompleted ? "Review" : "Start"}
-                      </Button>
-                    )}
+                    <div className="text-right">
+                      {isUnlocked ? (
+                        <Button className="rounded-full" onClick={() => navigate(`/lesson/${lesson.id}`)}>
+                          {isCompleted ? "Review" : "Start"}
+                        </Button>
+                      ) : (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Info className="w-3 h-3" />
+                          {xpRequirement} XP required
+                        </div>
+                      )}
+                      {!meetsXpRequirement && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          You have {profileXp} XP · need {xpRequirement}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

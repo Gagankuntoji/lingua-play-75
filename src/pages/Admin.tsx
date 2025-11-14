@@ -1,7 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, BookOpen, GraduationCap, FileText, BarChart3 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CourseManager from "@/components/admin/CourseManager";
+import LessonManager from "@/components/admin/LessonManager";
+import ItemManager from "@/components/admin/ItemManager";
+import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -17,100 +21,31 @@ const Admin = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="border-2 hover:shadow-lg transition-all cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-primary" />
-                Manage Courses
-              </CardTitle>
-              <CardDescription>
-                Create, edit, and manage language courses
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">View Courses</Button>
-            </CardContent>
-          </Card>
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
+        <Tabs defaultValue="courses" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="courses">Courses</TabsTrigger>
+            <TabsTrigger value="lessons">Lessons</TabsTrigger>
+            <TabsTrigger value="items">Exercises</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          </TabsList>
 
-          <Card className="border-2 hover:shadow-lg transition-all cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-secondary" />
-                Manage Lessons
-              </CardTitle>
-              <CardDescription>
-                Add and organize lessons within courses
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">View Lessons</Button>
-            </CardContent>
-          </Card>
+          <TabsContent value="courses">
+            <CourseManager />
+          </TabsContent>
 
-          <Card className="border-2 hover:shadow-lg transition-all cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-accent" />
-                Manage Exercises
-              </CardTitle>
-              <CardDescription>
-                Create and edit exercise items and content
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">View Exercises</Button>
-            </CardContent>
-          </Card>
+          <TabsContent value="lessons">
+            <LessonManager />
+          </TabsContent>
 
-          <Card className="border-2 hover:shadow-lg transition-all cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-success" />
-                Analytics
-              </CardTitle>
-              <CardDescription>
-                View user progress and completion statistics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">View Analytics</Button>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="items">
+            <ItemManager />
+          </TabsContent>
 
-        <Card className="border-2 mt-6">
-          <CardHeader>
-            <CardTitle>Quick Stats</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-6 text-center">
-              <div>
-                <p className="text-3xl font-bold text-primary">3</p>
-                <p className="text-sm text-muted-foreground">Total Courses</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-secondary">3</p>
-                <p className="text-sm text-muted-foreground">Total Lessons</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-accent">11</p>
-                <p className="text-sm text-muted-foreground">Total Exercises</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="mt-6 p-6 bg-muted/50 rounded-lg border-2">
-          <h3 className="font-bold mb-2">Admin Features</h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>✅ View all courses, lessons, and exercises</li>
-            <li>✅ Database managed through Lovable Cloud</li>
-            <li>✅ Direct SQL access for advanced management</li>
-            <li>🔄 Full CRUD interface (can be expanded)</li>
-          </ul>
-        </div>
+          <TabsContent value="analytics">
+            <AnalyticsDashboard />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
