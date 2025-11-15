@@ -25,7 +25,8 @@ This guide will help you deploy your LinguaLearn application to various platform
    - Configure environment variables:
      - `VITE_SUPABASE_URL` = Your Supabase URL
      - `VITE_SUPABASE_PUBLISHABLE_KEY` = Your Supabase publishable key
-     - `VITE_OPENAI_API_KEY` = Your OpenAI API key (optional)
+     - `VITE_GEMINI_API_KEY` = Your Gemini API key (recommended, free tier available)
+     - `VITE_OPENAI_API_KEY` = Your OpenAI API key (optional, fallback)
    - Click "Deploy"
 
 4. **Your app will be live at**: `https://lingua-play-75.vercel.app` (or your custom domain)
@@ -45,7 +46,8 @@ This guide will help you deploy your LinguaLearn application to various platform
    - Add environment variables in Site settings → Environment variables:
      - `VITE_SUPABASE_URL`
      - `VITE_SUPABASE_PUBLISHABLE_KEY`
-     - `VITE_OPENAI_API_KEY` (optional)
+     - `VITE_GEMINI_API_KEY` (recommended, free tier available)
+     - `VITE_OPENAI_API_KEY` (optional, fallback)
    - Click "Deploy site"
 
 2. **Your app will be live at**: `https://random-name.netlify.app` (or your custom domain)
@@ -96,7 +98,8 @@ Make sure to add these in your deployment platform:
 |----------|-------------|----------|
 | `VITE_SUPABASE_URL` | Your Supabase project URL | ✅ Yes |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key | ✅ Yes |
-| `VITE_OPENAI_API_KEY` | OpenAI API key for ChatGPT | ❌ Optional |
+| `VITE_GEMINI_API_KEY` | Google Gemini API key (free tier available) | ⭐ Recommended |
+| `VITE_OPENAI_API_KEY` | OpenAI API key for ChatGPT (fallback) | ❌ Optional |
 
 ---
 
