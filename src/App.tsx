@@ -14,7 +14,6 @@ import DailyReview from "./pages/DailyReview";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Playlists from "./pages/Playlists";
-import AutoSeedPage from "./pages/AutoSeedPage";
 
 const queryClient = new QueryClient();
 
@@ -87,14 +86,6 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Admin />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/auto-seed"
-            element={
-              <ProtectedRoute>
-                <AutoSeedPage />
               </ProtectedRoute>
             }
           />

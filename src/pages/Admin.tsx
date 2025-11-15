@@ -6,8 +6,6 @@ import CourseManager from "@/components/admin/CourseManager";
 import LessonManager from "@/components/admin/LessonManager";
 import ItemManager from "@/components/admin/ItemManager";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
-import ExerciseSeeder from "@/components/admin/ExerciseSeeder";
-import EnvCheck from "@/components/EnvCheck";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -24,8 +22,6 @@ const Admin = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <EnvCheck />
-        <div className="mt-4" />
         <Tabs defaultValue="courses" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="courses">Courses</TabsTrigger>
@@ -42,8 +38,7 @@ const Admin = () => {
             <LessonManager />
           </TabsContent>
 
-          <TabsContent value="items" className="space-y-6">
-            <ExerciseSeeder />
+          <TabsContent value="items">
             <ItemManager />
           </TabsContent>
 
