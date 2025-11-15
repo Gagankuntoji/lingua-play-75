@@ -1,7 +1,20 @@
 -- Fix Row Level Security policies for admin operations
--- Allow authenticated users to manage courses, lessons, and items
+-- This SQL will work in Supabase - copy and paste this entire file
 
--- Courses: Allow authenticated users to insert, update, and delete
+-- Drop existing policies if they exist (to avoid conflicts)
+DROP POLICY IF EXISTS "Authenticated users can insert courses" ON public.courses;
+DROP POLICY IF EXISTS "Authenticated users can update courses" ON public.courses;
+DROP POLICY IF EXISTS "Authenticated users can delete courses" ON public.courses;
+
+DROP POLICY IF EXISTS "Authenticated users can insert lessons" ON public.lessons;
+DROP POLICY IF EXISTS "Authenticated users can update lessons" ON public.lessons;
+DROP POLICY IF EXISTS "Authenticated users can delete lessons" ON public.lessons;
+
+DROP POLICY IF EXISTS "Authenticated users can insert items" ON public.items;
+DROP POLICY IF EXISTS "Authenticated users can update items" ON public.items;
+DROP POLICY IF EXISTS "Authenticated users can delete items" ON public.items;
+
+-- Create policies for courses
 CREATE POLICY "Authenticated users can insert courses" ON public.courses
   FOR INSERT
   TO authenticated
@@ -18,7 +31,7 @@ CREATE POLICY "Authenticated users can delete courses" ON public.courses
   TO authenticated
   USING (true);
 
--- Lessons: Allow authenticated users to insert, update, and delete
+-- Create policies for lessons
 CREATE POLICY "Authenticated users can insert lessons" ON public.lessons
   FOR INSERT
   TO authenticated
@@ -35,7 +48,7 @@ CREATE POLICY "Authenticated users can delete lessons" ON public.lessons
   TO authenticated
   USING (true);
 
--- Items: Allow authenticated users to insert, update, and delete
+-- Create policies for items
 CREATE POLICY "Authenticated users can insert items" ON public.items
   FOR INSERT
   TO authenticated
