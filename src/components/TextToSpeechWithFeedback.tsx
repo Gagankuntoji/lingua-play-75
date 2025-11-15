@@ -39,14 +39,18 @@ const TextToSpeechWithFeedback = ({
 
   const getFeedbackForRecording = async (recordingUrl: string) => {
     setIsLoadingFeedback(true);
+    setGeminiFeedback(null);
     try {
       const feedback = await getTTSFeedback(text, language, recordingUrl);
       if (feedback.message && !feedback.error) {
         setGeminiFeedback(feedback.message);
       } else if (feedback.error) {
+        setGeminiFeedback(`Error: ${feedback.error}`);
         console.error("Gemini feedback error:", feedback.error);
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      setGeminiFeedback(`Error: ${errorMsg}`);
       console.error("Error getting feedback:", error);
     } finally {
       setIsLoadingFeedback(false);
@@ -60,8 +64,13 @@ const TextToSpeechWithFeedback = ({
       const feedback = await getTTSFeedback(text, language);
       if (feedback.message && !feedback.error) {
         setGeminiFeedback(feedback.message);
+      } else if (feedback.error) {
+        setGeminiFeedback(`Error: ${feedback.error}`);
+        console.error("Gemini feedback error:", feedback.error);
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      setGeminiFeedback(`Error: ${errorMsg}`);
       console.error("Error getting pronunciation guide:", error);
     } finally {
       setIsLoadingFeedback(false);
