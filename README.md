@@ -24,10 +24,18 @@ A full-stack language learning platform that combines spaced repetition, interac
 - **Email/password authentication** via Supabase with protected routing and persistent sessions.
 - **Course catalog** that loads available language courses from Supabase and navigates learners into lesson collections.
 - **Lesson browser** with gating logic to lock later lessons until earlier content is completed.
-- **Interactive lesson player** that supports multiple choice, fill-in-the-blank, and translation tasks, validates answers, awards XP, and persists attempt history.
+- **Interactive lesson player** that supports:
+  - Multiple choice questions
+  - Fill-in-the-blank exercises
+  - Translation tasks
+  - **Speaking exercises with speech recognition** (NEW)
+- **AI-powered feedback** via ChatGPT integration for speaking practice (NEW)
+- **Text-to-speech** for pronunciation practice in all exercise types
+- **Speech-to-text recognition** for speaking exercises (NEW)
+- Validates answers, awards XP, and persists attempt history.
 - **Spaced repetition review** queue (SM-2 inspired) that surfaces due items from previous lessons on the daily review screen.
 - **Personal profile dashboard** showing XP, streaks, lesson completion stats, and placeholder achievements.
-- **Admin landing page** highlighting areas for course, lesson, exercise, and analytics management.
+- **Admin panel** with course, lesson, exercise management, and **exercise seeder** for quick content creation (NEW)
 - **Toast notifications** (radix + shadcn) for feedback during authentication and lesson completion.
 - **Responsive UI** built with Tailwind CSS, shadcn/ui primitives, and custom gradients/icons for a playful brand.
 
@@ -72,10 +80,13 @@ A full-stack language learning platform that combines spaced repetition, interac
 ### Lesson Player (`/lesson/:lessonId`)
 - Fetches all `items` (exercise prompts) for the lesson.
 - Supports:
-  - Multiple-choice questions (`MultipleChoiceExercise.tsx`)
-  - Translation input (`TranslateExercise.tsx`)
-  - Fill-in-the-blank word banks (`FillBlankExercise.tsx`)
-- Normalizes answers to improve matching, records attempts, awards XP, updates `user_progress`, and increments the learner’s XP in `profiles`.
+  - Multiple-choice questions (`MultipleChoiceExercise.tsx`) with text-to-speech
+  - Translation input (`TranslateExercise.tsx`) with audio playback
+  - Fill-in-the-blank word banks (`FillBlankExercise.tsx`) with audio
+  - **Speaking exercises** (`SpeakingExercise.tsx`) with speech recognition and ChatGPT feedback (NEW)
+- Normalizes answers to improve matching, records attempts, awards XP, updates `user_progress`, and increments the learner's XP in `profiles`.
+- **Speech recognition** uses browser's Web Speech API for real-time transcription
+- **ChatGPT integration** provides AI-powered feedback on pronunciation and accuracy for speaking exercises
 - Displays feedback modules, explanation slots, and a progress bar. On completion, the user is redirected home with a toast summary.
 
 ### Daily Review (`/review`)
@@ -87,8 +98,11 @@ A full-stack language learning platform that combines spaced repetition, interac
 - Pulls aggregate statistics from `user_progress`.
 
 ### Admin (`/admin`)
-- Landing area for course, lesson, exercise, and analytics management (buttons currently placeholders).
-- Quick stats highlights seeded counts and summarises available admin capabilities.
+- **Course Manager**: Create and edit language courses
+- **Lesson Manager**: Create and edit lessons within courses
+- **Exercise Manager**: Create and edit exercises (multiple choice, fill blank, translate, speaking)
+- **Exercise Seeder**: Quickly add sample exercises to courses (supports Spanish, French, Hindi) (NEW)
+- **Analytics Dashboard**: View user progress, XP trends, and completion statistics
 
 ---
 
@@ -173,6 +187,7 @@ Create a `.env` file at the repository root (Vite automatically loads `.env`, `.
 | --- | --- |
 | `VITE_SUPABASE_URL` | Supabase project URL |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public API key |
+| `VITE_OPENAI_API_KEY` | OpenAI API key for ChatGPT integration (optional, for AI feedback) |
 
 Optional: Configure additional Supabase or feature flags as needed (e.g., storage buckets, analytics endpoints).
 

@@ -310,6 +310,7 @@ const ItemManager = () => {
                   <SelectItem value="multiple_choice">Multiple choice</SelectItem>
                   <SelectItem value="fill_blank">Fill in the blank</SelectItem>
                   <SelectItem value="translate">Translate</SelectItem>
+                  <SelectItem value="speaking">Speaking (with speech recognition)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

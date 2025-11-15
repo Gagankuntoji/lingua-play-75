@@ -6,6 +6,7 @@ import CourseManager from "@/components/admin/CourseManager";
 import LessonManager from "@/components/admin/LessonManager";
 import ItemManager from "@/components/admin/ItemManager";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
+import ExerciseSeeder from "@/components/admin/ExerciseSeeder";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -38,7 +39,8 @@ const Admin = () => {
             <LessonManager />
           </TabsContent>
 
-          <TabsContent value="items">
+          <TabsContent value="items" className="space-y-6">
+            <ExerciseSeeder />
             <ItemManager />
           </TabsContent>
 

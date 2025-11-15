@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import MultipleChoiceExercise from "@/components/exercises/MultipleChoiceExercise";
 import TranslateExercise from "@/components/exercises/TranslateExercise";
 import FillBlankExercise from "@/components/exercises/FillBlankExercise";
+import SpeakingExercise from "@/components/exercises/SpeakingExercise";
 
 interface Item {
   id: string;
@@ -90,14 +91,21 @@ const LessonPlayer = () => {
     loadLessonAndItems();
   }, [loadLessonAndItems]);
 
-  const normalizeAnswer = (text: string) => {
+  const normalizeAnswerText = (text: string) => {
     return text.toLowerCase().trim().replace(/[-.,/#!$%^&*;:{}=_`~()]/g, "");
   };
 
   const checkAnswer = async () => {
     const currentItem = items[currentIndex];
-    const normalizedAnswer = normalizeAnswer(answer);
-    const normalizedCorrect = normalizeAnswer(currentItem.correct_answer);
+    
+    // For speaking exercises, the answer is handled by the component
+    if (currentItem.type === "speaking") {
+      setShowFeedback(true);
+      return;
+    }
+
+    const normalizedAnswer = normalizeAnswerText(answer);
+    const normalizedCorrect = normalizeAnswerText(currentItem.correct_answer);
     const correct = normalizedAnswer === normalizedCorrect;
 
     setIsCorrect(correct);
@@ -114,6 +122,28 @@ const LessonPlayer = () => {
           user_id: user.id,
           item_id: currentItem.id,
           user_answer: answer,
+          correct: true,
+          score: points,
+        });
+      }
+    }
+  };
+
+  const handleSpeakingAnswer = async (userAnswer: string, isCorrect: boolean) => {
+    const currentItem = items[currentIndex];
+    setIsCorrect(isCorrect);
+    
+    if (isCorrect) {
+      const points = 10;
+      setXpEarned(prev => prev + points);
+
+      // Save attempt
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("exercise_attempts").insert({
+          user_id: user.id,
+          item_id: currentItem.id,
+          user_answer: userAnswer,
           correct: true,
           score: points,
         });
@@ -263,6 +293,16 @@ const LessonPlayer = () => {
                   languageTo={lesson?.course?.language_to}
                 />
               )}
+
+              {currentItem.type === "speaking" && (
+                <SpeakingExercise
+                  question={currentItem.question}
+                  correctAnswer={currentItem.correct_answer}
+                  languageTo={lesson?.course?.language_to}
+                  showFeedback={showFeedback}
+                  onAnswer={handleSpeakingAnswer}
+                />
+              )}
             </div>
 
             {showFeedback && (
@@ -290,15 +330,15 @@ const LessonPlayer = () => {
             )}
 
             <div className="flex gap-4">
-              {!showFeedback ? (
+              {!showFeedback && currentItem.type !== "speaking" ? (
                 <Button onClick={checkAnswer} disabled={!answer} className="w-full" size="lg">
                   Check
                 </Button>
-              ) : (
+              ) : showFeedback ? (
                 <Button onClick={handleNext} className="w-full" size="lg">
                   {currentIndex < items.length - 1 ? "Continue" : "Finish"}
                 </Button>
-              )}
+              ) : null}
             </div>
           </CardContent>
         </Card>
