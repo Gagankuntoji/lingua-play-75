@@ -4,12 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { X, Check, Lightbulb } from "lucide-react";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { X, Check, Lightbulb, Bot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MultipleChoiceExercise from "@/components/exercises/MultipleChoiceExercise";
 import TranslateExercise from "@/components/exercises/TranslateExercise";
 import FillBlankExercise from "@/components/exercises/FillBlankExercise";
 import SpeakingExercise from "@/components/exercises/SpeakingExercise";
+import ChatGPTAssistant from "@/components/ChatGPTAssistant";
+import { getExerciseFeedback } from "@/lib/chatgpt";
 
 interface Item {
   id: string;
@@ -44,6 +47,8 @@ const LessonPlayer = () => {
   const [loading, setLoading] = useState(true);
   const [xpEarned, setXpEarned] = useState(0);
   const [showHint, setShowHint] = useState(false);
+  const [chatGPTFeedback, setChatGPTFeedback] = useState<string | null>(null);
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
 
   const loadLessonAndItems = useCallback(async () => {
     try {
@@ -111,6 +116,27 @@ const LessonPlayer = () => {
     setIsCorrect(correct);
     setShowFeedback(true);
 
+    // Get ChatGPT feedback
+    if (lesson?.course?.language_to && answer) {
+      setIsLoadingFeedback(true);
+      try {
+        const feedback = await getExerciseFeedback(
+          answer,
+          currentItem.correct_answer,
+          currentItem.question,
+          currentItem.type,
+          lesson.course.language_to
+        );
+        if (feedback.message && !feedback.error) {
+          setChatGPTFeedback(feedback.message);
+        }
+      } catch (error) {
+        console.error("Error getting feedback:", error);
+      } finally {
+        setIsLoadingFeedback(false);
+      }
+    }
+
     if (correct) {
       const points = 10;
       setXpEarned(prev => prev + points);
@@ -124,6 +150,18 @@ const LessonPlayer = () => {
           user_answer: answer,
           correct: true,
           score: points,
+        });
+      }
+    } else {
+      // Save incorrect attempt
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("exercise_attempts").insert({
+          user_id: user.id,
+          item_id: currentItem.id,
+          user_answer: answer,
+          correct: false,
+          score: 0,
         });
       }
     }
@@ -158,6 +196,7 @@ const LessonPlayer = () => {
       setShowFeedback(false);
       setIsCorrect(false);
       setShowHint(false);
+      setChatGPTFeedback(null);
     } else {
       completeLesson();
     }
@@ -229,6 +268,19 @@ const LessonPlayer = () => {
               <X className="w-5 h-5" />
             </Button>
             <Progress value={progress} className="flex-1 h-3" />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon" title="AI Assistant">
+                  <Bot className="w-5 h-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+                <ChatGPTAssistant 
+                  language={lesson?.course?.language_to} 
+                  topic={lesson?.title}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </header>
@@ -306,25 +358,45 @@ const LessonPlayer = () => {
             </div>
 
             {showFeedback && (
-              <div
-                className={`p-6 rounded-lg mb-6 ${
-                  isCorrect ? "bg-success/10 border-2 border-success" : "bg-destructive/10 border-2 border-destructive"
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  {isCorrect ? (
-                    <Check className="w-6 h-6 text-success" />
-                  ) : (
-                    <X className="w-6 h-6 text-destructive" />
+              <div className="space-y-4 mb-6">
+                <div
+                  className={`p-6 rounded-lg ${
+                    isCorrect ? "bg-success/10 border-2 border-success" : "bg-destructive/10 border-2 border-destructive"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    {isCorrect ? (
+                      <Check className="w-6 h-6 text-success" />
+                    ) : (
+                      <X className="w-6 h-6 text-destructive" />
+                    )}
+                    <p className="text-lg font-bold">
+                      {isCorrect ? "Correct! 🎉" : "Not quite right"}
+                    </p>
+                  </div>
+                  {!isCorrect && (
+                    <p className="text-muted-foreground">
+                      Correct answer: <span className="font-bold">{currentItem.correct_answer}</span>
+                    </p>
                   )}
-                  <p className="text-lg font-bold">
-                    {isCorrect ? "Correct! 🎉" : "Not quite right"}
-                  </p>
                 </div>
-                {!isCorrect && (
-                  <p className="text-muted-foreground">
-                    Correct answer: <span className="font-bold">{currentItem.correct_answer}</span>
-                  </p>
+                
+                {chatGPTFeedback && (
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="flex items-start gap-3">
+                      <Bot className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold mb-1">AI Feedback:</p>
+                        <p className="text-sm text-muted-foreground">{chatGPTFeedback}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {isLoadingFeedback && (
+                  <div className="p-4 rounded-lg bg-muted/50 flex items-center gap-3">
+                    <Bot className="w-5 h-5 text-primary animate-pulse" />
+                    <p className="text-sm text-muted-foreground">Getting AI feedback...</p>
+                  </div>
                 )}
               </div>
             )}

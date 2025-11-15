@@ -316,3 +316,127 @@ export const genericExercises: ExerciseSeed['exercises'] = [
   },
 ];
 
+/**
+ * Comprehensive exercise sets for different topics
+ */
+export const comprehensiveExercises: Record<string, ExerciseSeed[]> = {
+  spanish: [
+    {
+      lessonTitle: "Greetings and Introductions",
+      exercises: [
+        {
+          type: "multiple_choice",
+          question: "How do you say 'Hello' in Spanish?",
+          correct_answer: "Hola",
+          options: ["Hola", "Adiós", "Gracias", "Por favor"],
+          explanation: "'Hola' is the standard greeting in Spanish.",
+        },
+        {
+          type: "translate",
+          question: "Good morning",
+          correct_answer: "Buenos días",
+          hint: "Starts with 'Buenos'",
+        },
+        {
+          type: "speaking",
+          question: "Say: 'Mucho gusto' (Nice to meet you)",
+          correct_answer: "Mucho gusto",
+        },
+        {
+          type: "fill_blank",
+          question: "Me llamo ___ (My name is)",
+          correct_answer: "Juan",
+          options: ["Juan", "María", "Pedro", "Ana"],
+        },
+      ],
+    },
+    {
+      lessonTitle: "Numbers 1-10",
+      exercises: [
+        {
+          type: "multiple_choice",
+          question: "What is 'cinco' in English?",
+          correct_answer: "Five",
+          options: ["Three", "Four", "Five", "Six"],
+        },
+        {
+          type: "translate",
+          question: "Seven",
+          correct_answer: "Siete",
+        },
+        {
+          type: "speaking",
+          question: "Count from one to five: uno, dos, tres, cuatro, cinco",
+          correct_answer: "uno dos tres cuatro cinco",
+        },
+      ],
+    },
+    {
+      lessonTitle: "Common Phrases",
+      exercises: [
+        {
+          type: "translate",
+          question: "Thank you",
+          correct_answer: "Gracias",
+        },
+        {
+          type: "translate",
+          question: "Please",
+          correct_answer: "Por favor",
+        },
+        {
+          type: "speaking",
+          question: "Say: '¿Cómo estás?' (How are you?)",
+          correct_answer: "Cómo estás",
+        },
+      ],
+    },
+  ],
+  french: [
+    {
+      lessonTitle: "Basic Greetings",
+      exercises: [
+        {
+          type: "multiple_choice",
+          question: "How do you say 'Hello' in French?",
+          correct_answer: "Bonjour",
+          options: ["Bonjour", "Au revoir", "Merci", "S'il vous plaît"],
+        },
+        {
+          type: "translate",
+          question: "Good evening",
+          correct_answer: "Bonsoir",
+        },
+        {
+          type: "speaking",
+          question: "Say: 'Comment allez-vous?' (How are you?)",
+          correct_answer: "Comment allez-vous",
+        },
+      ],
+    },
+  ],
+  hindi: [
+    {
+      lessonTitle: "Basic Greetings",
+      exercises: [
+        {
+          type: "multiple_choice",
+          question: "How do you say 'Hello' in Hindi?",
+          correct_answer: "नमस्ते",
+          options: ["नमस्ते", "अलविदा", "धन्यवाद", "कृपया"],
+        },
+        {
+          type: "translate",
+          question: "Thank you",
+          correct_answer: "धन्यवाद",
+        },
+        {
+          type: "speaking",
+          question: "Say: 'आप कैसे हैं?' (How are you?)",
+          correct_answer: "आप कैसे हैं",
+        },
+      ],
+    },
+  ],
+};
+

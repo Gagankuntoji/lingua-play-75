@@ -108,6 +108,36 @@ export const getTranslationHelp = async (
 };
 
 /**
+ * Get feedback on any exercise answer
+ */
+export const getExerciseFeedback = async (
+  userAnswer: string,
+  correctAnswer: string,
+  question: string,
+  exerciseType: string,
+  language: string
+): Promise<ChatGPTResponse> => {
+  const systemPrompt = `You are a helpful ${language} language tutor. Provide constructive feedback on student answers. Be encouraging and educational.`;
+
+  const prompt = `The student is learning ${language}. 
+
+Exercise type: ${exerciseType}
+Question: "${question}"
+Correct answer: "${correctAnswer}"
+Student's answer: "${userAnswer}"
+
+Provide:
+1. Accuracy assessment
+2. What they did well
+3. What needs improvement
+4. A brief explanation or tip
+
+Keep it concise (2-3 sentences).`;
+
+  return callChatGPT(prompt, systemPrompt);
+};
+
+/**
  * Generate practice exercises
  */
 export const generatePracticeExercise = async (
