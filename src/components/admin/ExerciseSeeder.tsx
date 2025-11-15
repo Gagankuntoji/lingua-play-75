@@ -7,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { 
   seedExercisesForCourse, 
+  addExercisesToAllLessons,
   spanishCourseExercises, 
   frenchCourseExercises, 
-  hindiCourseExercises 
+  hindiCourseExercises,
+  genericExercises
 } from "@/lib/seedExercises";
 
 interface Course {
@@ -47,6 +49,42 @@ const ExerciseSeeder = () => {
     return null;
   };
 
+  const handleAddGenericExercises = async () => {
+    if (!selectedCourse) {
+      toast({
+        title: "Please select a course",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSeeding(true);
+    try {
+      const result = await addExercisesToAllLessons(selectedCourse, genericExercises);
+      if (result.success) {
+        toast({
+          title: "Exercises added successfully!",
+          description: `Added ${result.added || 0} generic exercises to all lessons`,
+        });
+        window.location.reload();
+      } else {
+        toast({
+          title: "Error adding exercises",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const handleSeedExercises = async () => {
     if (!selectedCourse) {
       toast({
@@ -75,8 +113,10 @@ const ExerciseSeeder = () => {
       if (result.success) {
         toast({
           title: "Exercises seeded successfully!",
-          description: `Added exercises to ${course.title}`,
+          description: `Added ${result.added || 0} exercises to ${course.title}`,
         });
+        // Refresh the page data
+        window.location.reload();
       } else {
         toast({
           title: "Error seeding exercises",
@@ -105,6 +145,7 @@ const ExerciseSeeder = () => {
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Add sample exercises to existing courses. Currently supports Spanish, French, and Hindi.
+          Exercises will be added to lessons that match the lesson titles, or to the first available lesson.
         </p>
         
         <div className="space-y-2">
@@ -123,13 +164,24 @@ const ExerciseSeeder = () => {
           </Select>
         </div>
 
-        <Button 
-          onClick={handleSeedExercises} 
-          disabled={!selectedCourse || isSeeding || coursesQuery.isLoading}
-          className="w-full"
-        >
-          {isSeeding ? "Seeding exercises..." : "Seed Exercises"}
-        </Button>
+        <div className="space-y-2">
+          <Button 
+            onClick={handleSeedExercises} 
+            disabled={!selectedCourse || isSeeding || coursesQuery.isLoading}
+            className="w-full"
+          >
+            {isSeeding ? "Seeding exercises..." : "Seed Language-Specific Exercises"}
+          </Button>
+          
+          <Button 
+            onClick={handleAddGenericExercises} 
+            disabled={!selectedCourse || isSeeding || coursesQuery.isLoading}
+            variant="outline"
+            className="w-full"
+          >
+            {isSeeding ? "Adding exercises..." : "Add Generic Exercises to All Lessons"}
+          </Button>
+        </div>
 
         {selectedCourse && (
           <div className="text-xs text-muted-foreground">

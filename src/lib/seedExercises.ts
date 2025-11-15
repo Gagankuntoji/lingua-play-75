@@ -19,7 +19,7 @@ interface ExerciseSeed {
 export const seedExercisesForCourse = async (
   courseId: string,
   exercisesByLesson: ExerciseSeed[]
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<{ success: boolean; error?: string; added?: number }> => {
   try {
     // Get all lessons for this course
     const { data: lessons, error: lessonsError } = await supabase
@@ -33,12 +33,38 @@ export const seedExercisesForCourse = async (
       return { success: false, error: "No lessons found for this course" };
     }
 
-    // Match exercises to lessons by title
+    let totalAdded = 0;
+
+    // Match exercises to lessons by title, or add to first available lesson if no match
     for (const lessonSeed of exercisesByLesson) {
-      const lesson = lessons.find((l) => l.title === lessonSeed.lessonTitle);
+      let lesson = lessons.find((l) => l.title === lessonSeed.lessonTitle);
+      
+      // If no exact match, try to find a similar lesson or use the first lesson
+      if (!lesson) {
+        // Try case-insensitive match
+        lesson = lessons.find((l) => l.title.toLowerCase() === lessonSeed.lessonTitle.toLowerCase());
+      }
+      
+      // If still no match, use the first lesson (or create exercises for all lessons)
+      if (!lesson && lessons.length > 0) {
+        // Add exercises to the first lesson that doesn't have many exercises yet
+        lesson = lessons[0];
+      }
       
       if (!lesson) {
-        console.warn(`Lesson "${lessonSeed.lessonTitle}" not found, skipping...`);
+        console.warn(`No lesson found for "${lessonSeed.lessonTitle}", skipping...`);
+        continue;
+      }
+
+      // Check if exercises already exist for this lesson
+      const { data: existingItems } = await supabase
+        .from("items")
+        .select("id")
+        .eq("lesson_id", lesson.id);
+
+      // Only add if lesson has few or no exercises
+      if (existingItems && existingItems.length > 0 && existingItems.length >= lessonSeed.exercises.length) {
+        console.log(`Lesson "${lesson.title}" already has exercises, skipping...`);
         continue;
       }
 
@@ -54,16 +80,81 @@ export const seedExercisesForCourse = async (
           options: exercise.options ? JSON.stringify(exercise.options) : null,
           explanation: exercise.explanation || null,
           hint: exercise.hint || null,
-          order_index: i + 1,
+          order_index: (existingItems?.length || 0) + i + 1,
         });
 
         if (insertError) {
-          console.error(`Error inserting exercise for lesson "${lessonSeed.lessonTitle}":`, insertError);
+          console.error(`Error inserting exercise for lesson "${lesson.title}":`, insertError);
+        } else {
+          totalAdded++;
         }
       }
     }
 
-    return { success: true };
+    return { success: true, added: totalAdded };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Add exercises to all lessons in a course (more flexible)
+ */
+export const addExercisesToAllLessons = async (
+  courseId: string,
+  exercises: ExerciseSeed['exercises']
+): Promise<{ success: boolean; error?: string; added?: number }> => {
+  try {
+    const { data: lessons, error: lessonsError } = await supabase
+      .from("lessons")
+      .select("id, title, order_index")
+      .eq("course_id", courseId)
+      .order("order_index", { ascending: true });
+
+    if (lessonsError) throw lessonsError;
+    if (!lessons || lessons.length === 0) {
+      return { success: false, error: "No lessons found for this course" };
+    }
+
+    let totalAdded = 0;
+
+    // Add exercises to each lesson
+    for (const lesson of lessons) {
+      // Check existing exercises
+      const { data: existingItems } = await supabase
+        .from("items")
+        .select("id")
+        .eq("lesson_id", lesson.id);
+
+      const startIndex = (existingItems?.length || 0) + 1;
+
+      // Add exercises to this lesson
+      for (let i = 0; i < exercises.length; i++) {
+        const exercise = exercises[i];
+        
+        const { error: insertError } = await supabase.from("items").insert({
+          lesson_id: lesson.id,
+          type: exercise.type,
+          question: exercise.question,
+          correct_answer: exercise.correct_answer,
+          options: exercise.options ? JSON.stringify(exercise.options) : null,
+          explanation: exercise.explanation || null,
+          hint: exercise.hint || null,
+          order_index: startIndex + i,
+        });
+
+        if (insertError) {
+          console.error(`Error inserting exercise for lesson "${lesson.title}":`, insertError);
+        } else {
+          totalAdded++;
+        }
+      }
+    }
+
+    return { success: true, added: totalAdded };
   } catch (error) {
     return {
       success: false,
@@ -190,6 +281,38 @@ export const hindiCourseExercises: ExerciseSeed[] = [
         explanation: "Practice the pronunciation of this common question.",
       },
     ],
+  },
+];
+
+/**
+ * Generic exercises that can be added to any course/lesson
+ */
+export const genericExercises: ExerciseSeed['exercises'] = [
+  {
+    type: "multiple_choice",
+    question: "What is the correct translation?",
+    correct_answer: "Hello",
+    options: ["Hello", "Goodbye", "Thank you", "Please"],
+    explanation: "Basic greeting exercise.",
+  },
+  {
+    type: "translate",
+    question: "Translate: Hello",
+    correct_answer: "Hello",
+    explanation: "Practice your translation skills.",
+  },
+  {
+    type: "fill_blank",
+    question: "Complete: ___ is a greeting",
+    correct_answer: "Hello",
+    options: ["Hello", "Goodbye", "Thanks", "Yes"],
+    explanation: "Fill in the blank exercise.",
+  },
+  {
+    type: "speaking",
+    question: "Say: 'Hello, how are you?'",
+    correct_answer: "Hello how are you",
+    explanation: "Practice speaking this phrase.",
   },
 ];
 
