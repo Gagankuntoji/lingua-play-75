@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
 import { useTextToSpeech, getLanguageCode } from "@/hooks/useTextToSpeech";
+import TextToSpeechWithFeedback from "@/components/TextToSpeechWithFeedback";
 
 interface MultipleChoiceExerciseProps {
   question: string;
@@ -31,17 +32,15 @@ const MultipleChoiceExercise = ({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold">{question}</h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handlePlayAudio(question)}
-          disabled={isSpeaking}
-          className="shrink-0"
-        >
-          <Volume2 className={`w-5 h-5 ${isSpeaking ? 'text-primary animate-pulse' : ''}`} />
-        </Button>
+      <div className="mb-4">
+        <h3 className="text-xl font-semibold mb-3">{question}</h3>
+        {languageTo && (
+          <TextToSpeechWithFeedback
+            text={question}
+            language={languageTo}
+            showFeedback={true}
+          />
+        )}
       </div>
       <div className="grid gap-3">
       {options.map((option) => {

@@ -34,6 +34,32 @@ export const callAI = async (
 }
 
 /**
+ * Get text-to-speech pronunciation feedback (uses Gemini if available)
+ */
+export const getTTSFeedback = async (
+  text: string,
+  language: string,
+  userRecordingUrl?: string
+): Promise<ChatGPTResponse> => {
+  // Try Gemini first (free)
+  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      const { getTTSFeedback: getGeminiTTSFeedback } = await import('./gemini');
+      return await getGeminiTTSFeedback(text, language, userRecordingUrl);
+    } catch (error) {
+      console.log('Gemini not available for TTS feedback...');
+    }
+  }
+
+  // Fallback: return basic message
+  return {
+    message: `Practice pronouncing "${text}" in ${language}. Focus on clear articulation and correct intonation.`,
+    error: undefined,
+  };
+}
+
+/**
  * Call ChatGPT API to get feedback on language learning exercises
  */
 export const callChatGPT = async (

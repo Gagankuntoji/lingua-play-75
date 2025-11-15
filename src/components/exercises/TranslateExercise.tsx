@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
 import { useTextToSpeech, getLanguageCode } from "@/hooks/useTextToSpeech";
+import TextToSpeechWithFeedback from "@/components/TextToSpeechWithFeedback";
 
 interface TranslateExerciseProps {
   question: string;
@@ -30,19 +31,17 @@ const TranslateExercise = ({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-lg text-muted-foreground">Translate this:</p>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handlePlayAudio}
-          disabled={isSpeaking}
-          className="shrink-0"
-        >
-          <Volume2 className={`w-5 h-5 ${isSpeaking ? 'text-primary animate-pulse' : ''}`} />
-        </Button>
+      <div className="mb-4">
+        <p className="text-lg text-muted-foreground mb-2">Translate this:</p>
+        <p className="text-xl font-semibold mb-3">{question}</p>
+        {languageTo && (
+          <TextToSpeechWithFeedback
+            text={question}
+            language={languageTo}
+            showFeedback={true}
+          />
+        )}
       </div>
-      <p className="text-xl font-semibold mb-4">{question}</p>
       <Input
         type="text"
         value={answer}

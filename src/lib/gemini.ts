@@ -144,6 +144,91 @@ export const getTranslationHelpGemini = async (
 };
 
 /**
+ * Get feedback on text-to-speech pronunciation using Gemini
+ */
+export const getTTSFeedback = async (
+  text: string,
+  language: string,
+  userRecordingUrl?: string
+): Promise<GeminiResponse> => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    return {
+      message: '',
+      error: 'Gemini API key not configured.',
+    };
+  }
+
+  try {
+    const model = 'gemini-1.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const systemPrompt = `You are a helpful ${language} pronunciation tutor. Provide detailed feedback on pronunciation, intonation, and clarity.`;
+
+    const prompt = userRecordingUrl
+      ? `The student is learning ${language}. They need to pronounce: "${text}"
+
+They have recorded their attempt. Please provide:
+1. Pronunciation accuracy assessment
+2. Specific sounds or words that need improvement
+3. Tips for better pronunciation
+4. Encouragement
+
+Keep it concise (3-4 sentences).`
+      : `The student is learning ${language}. They need to pronounce: "${text}"
+
+Please provide:
+1. Pronunciation guide (how to say it correctly)
+2. Common mistakes to avoid
+3. Tips for practice
+4. Breakdown of difficult sounds
+
+Keep it concise (3-4 sentences).`;
+
+    const fullPrompt = `${systemPrompt}\n\n${prompt}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: fullPrompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 300,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        message: '',
+        error: errorData.error?.message || `API error: ${response.status}`,
+      };
+    }
+
+    const data = await response.json();
+    const message = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    return { message: message.trim() };
+  } catch (error) {
+    return {
+      message: '',
+      error: error instanceof Error ? error.message : 'Failed to call Gemini API',
+    };
+  }
+};
+
+/**
  * Chat with Gemini AI assistant
  */
 export const chatWithGemini = async (
