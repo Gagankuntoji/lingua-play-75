@@ -13,6 +13,7 @@ import {
   hindiCourseExercises,
   genericExercises
 } from "@/lib/seedExercises";
+import { autoSeedAllCourses } from "@/lib/autoSeedExercises";
 
 interface Course {
   id: string;
@@ -24,6 +25,7 @@ const ExerciseSeeder = () => {
   const { toast } = useToast();
   const [selectedCourse, setSelectedCourse] = useState<string>("");
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isSeedingAll, setIsSeedingAll] = useState(false);
 
   const coursesQuery = useQuery({
     queryKey: ["admin", "courses"],
@@ -135,6 +137,37 @@ const ExerciseSeeder = () => {
     }
   };
 
+  const handleAutoSeedAll = async () => {
+    setIsSeedingAll(true);
+    try {
+      const result = await autoSeedAllCourses();
+      if (result.success) {
+        toast({
+          title: "All courses seeded successfully!",
+          description: `Added ${result.added} exercises to ${result.processed} courses`,
+        });
+        window.location.reload();
+      } else {
+        toast({
+          title: "Seeding completed with errors",
+          description: `Processed ${result.processed} courses, added ${result.added} exercises. ${result.errors.length} error(s).`,
+          variant: result.errors.length > 0 ? "destructive" : "default",
+        });
+        if (result.errors.length > 0) {
+          console.error("Seeding errors:", result.errors);
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSeedingAll(false);
+    }
+  };
+
   const courses = coursesQuery.data ?? [];
 
   return (
@@ -180,6 +213,21 @@ const ExerciseSeeder = () => {
             className="w-full"
           >
             {isSeeding ? "Adding exercises..." : "Add Generic Exercises to All Lessons"}
+          </Button>
+        </div>
+
+        <div className="pt-4 border-t">
+          <p className="text-sm font-medium mb-2">Auto-Seed All Courses</p>
+          <p className="text-xs text-muted-foreground mb-3">
+            Automatically add exercises to all courses that don't have any yet. Language-specific exercises for Spanish, French, Hindi; generic exercises for others.
+          </p>
+          <Button 
+            onClick={handleAutoSeedAll}
+            disabled={isSeedingAll || coursesQuery.isLoading}
+            variant="default"
+            className="w-full"
+          >
+            {isSeedingAll ? "Seeding all courses..." : "Auto-Seed All Courses"}
           </Button>
         </div>
 

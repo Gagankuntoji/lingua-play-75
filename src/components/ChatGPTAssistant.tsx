@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Bot, User, Loader2, X } from "lucide-react";
-import { callChatGPT } from "@/lib/chatgpt";
+import { callAI } from "@/lib/chatgpt";
+import { chatWithGemini } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
@@ -67,9 +68,26 @@ const ChatGPTAssistant = ({ language, topic, onClose }: ChatGPTAssistantProps) =
         ? `The user is currently studying: ${topic}. `
         : "";
 
-      const fullPrompt = `${contextPrompt}${userMessage.content}`;
-
-      const response = await callChatGPT(fullPrompt, systemPrompt);
+      // Try Gemini first (free), then ChatGPT
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      let response;
+      
+      if (geminiKey) {
+        try {
+          const conversationHistory = messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }));
+          response = await chatWithGemini(conversationHistory, language, topic);
+        } catch (error) {
+          console.log('Gemini not available, using ChatGPT...');
+          const fullPrompt = `${contextPrompt}${userMessage.content}`;
+          response = await callAI(fullPrompt, systemPrompt);
+        }
+      } else {
+        const fullPrompt = `${contextPrompt}${userMessage.content}`;
+        response = await callAI(fullPrompt, systemPrompt);
+      }
 
       if (response.error) {
         toast({

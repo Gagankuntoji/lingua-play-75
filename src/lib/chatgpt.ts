@@ -9,6 +9,31 @@ interface ChatGPTResponse {
 }
 
 /**
+ * Unified AI function that tries Gemini first (free), then falls back to ChatGPT
+ */
+export const callAI = async (
+  prompt: string,
+  systemPrompt?: string
+): Promise<ChatGPTResponse> => {
+  // Try Gemini first (free)
+  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      const { callGemini } = await import('./gemini');
+      const result = await callGemini(prompt, systemPrompt);
+      if (!result.error) {
+        return result;
+      }
+    } catch (error) {
+      console.log('Gemini not available, trying ChatGPT...');
+    }
+  }
+
+  // Fallback to ChatGPT
+  return callChatGPT(prompt, systemPrompt);
+}
+
+/**
  * Call ChatGPT API to get feedback on language learning exercises
  */
 export const callChatGPT = async (
@@ -68,13 +93,24 @@ export const callChatGPT = async (
 };
 
 /**
- * Get feedback on a spoken language exercise
+ * Get feedback on a spoken language exercise (uses Gemini if available, otherwise ChatGPT)
  */
 export const getSpeakingFeedback = async (
   userSpeech: string,
   expectedPhrase: string,
   language: string
 ): Promise<ChatGPTResponse> => {
+  // Try Gemini first (free), then ChatGPT
+  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      const { getSpeakingFeedbackGemini } = await import('./gemini');
+      return await getSpeakingFeedbackGemini(userSpeech, expectedPhrase, language);
+    } catch (error) {
+      console.log('Gemini not available, using ChatGPT...');
+    }
+  }
+
   const systemPrompt = `You are a helpful language learning assistant. Provide constructive feedback on pronunciation, grammar, and accuracy. Be encouraging and specific.`;
 
   const prompt = `The student is learning ${language}. They were asked to say: "${expectedPhrase}"
@@ -108,7 +144,7 @@ export const getTranslationHelp = async (
 };
 
 /**
- * Get feedback on any exercise answer
+ * Get feedback on any exercise answer (uses Gemini if available, otherwise ChatGPT)
  */
 export const getExerciseFeedback = async (
   userAnswer: string,
@@ -133,6 +169,17 @@ Provide:
 4. A brief explanation or tip
 
 Keep it concise (2-3 sentences).`;
+
+  // Try Gemini first (free), then ChatGPT
+  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      const { getExerciseFeedbackGemini } = await import('./gemini');
+      return await getExerciseFeedbackGemini(userAnswer, correctAnswer, question, exerciseType, language);
+    } catch (error) {
+      console.log('Gemini not available, using ChatGPT...');
+    }
+  }
 
   return callChatGPT(prompt, systemPrompt);
 };

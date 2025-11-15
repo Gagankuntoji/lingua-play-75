@@ -187,7 +187,8 @@ Create a `.env` file at the repository root (Vite automatically loads `.env`, `.
 | --- | --- |
 | `VITE_SUPABASE_URL` | Supabase project URL |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public API key |
-| `VITE_OPENAI_API_KEY` | OpenAI API key for ChatGPT integration (optional, for AI feedback) |
+| `VITE_GEMINI_API_KEY` | Google Gemini API key (free tier available, recommended) - Get from https://makersuite.google.com/app/apikey |
+| `VITE_OPENAI_API_KEY` | OpenAI API key for ChatGPT integration (optional, fallback if Gemini not available) |
 
 Optional: Configure additional Supabase or feature flags as needed (e.g., storage buckets, analytics endpoints).
 
