@@ -197,7 +197,7 @@ const Home = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="border-2 hover:shadow-lg transition-all cursor-pointer"
                 onClick={() => navigate("/profile")}>
             <CardContent className="p-6 text-center">
@@ -220,6 +220,15 @@ const Home = () => {
               <div className="text-4xl mb-2">🎧</div>
               <h3 className="font-bold">Playlists</h3>
               <p className="text-sm text-muted-foreground mt-1">Build focus tracks</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => navigate("/admin")}>
+            <CardContent className="p-6 text-center">
+              <div className="text-4xl mb-2">⚙️</div>
+              <h3 className="font-bold">Admin Panel</h3>
+              <p className="text-sm text-muted-foreground mt-1">Manage courses & exercises</p>
             </CardContent>
           </Card>
         </div>
