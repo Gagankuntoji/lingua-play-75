@@ -41,6 +41,7 @@ const LessonPlayer = () => {
   const [isFallback, setIsFallback] = useState(false);
 
   const loadItems = useCallback(async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("items")
@@ -48,30 +49,34 @@ const LessonPlayer = () => {
         .eq("lesson_id", lessonId)
         .order("order_index", { ascending: true });
 
-      if (error) throw error;
-      
-      // If no data from Supabase, use sample data
-      if (!data || data.length === 0) {
-        throw new Error("No Supabase items");
+      // If we have data from Supabase and no error, use it
+      if (!error && data && data.length > 0) {
+        const parsedItems = data.map(item => ({
+          ...item,
+          options: item.options
+            ? typeof item.options === "string"
+              ? (JSON.parse(item.options) as string[])
+              : (item.options as string[])
+            : null,
+        }));
+        
+        setItems(parsedItems);
+        setIsFallback(false);
+        console.log(`Loaded ${parsedItems.length} exercises from Supabase for lesson ${lessonId}`);
+      } else {
+        // No Supabase data or error, use sample data
+        throw new Error("No Supabase items, using sample data");
       }
-      
-      const parsedItems = data.map(item => ({
-        ...item,
-        options: item.options
-          ? typeof item.options === "string"
-            ? (JSON.parse(item.options) as string[])
-            : (item.options as string[])
-          : null,
-      }));
-      
-      setItems(parsedItems);
-      setIsFallback(false);
     } catch (error) {
-      console.error("Error loading items:", error);
+      console.log("Loading sample exercises for lesson:", lessonId, error);
       const sampleItems = getSampleItemsByLesson(lessonId);
       if (sampleItems.length > 0) {
         setItems(sampleItems);
         setIsFallback(true);
+        console.log(`Loaded ${sampleItems.length} sample exercises for lesson ${lessonId}`);
+      } else {
+        console.warn(`No exercises found for lesson ${lessonId}`);
+        setItems([]);
       }
     } finally {
       setLoading(false);

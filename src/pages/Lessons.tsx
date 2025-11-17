@@ -116,44 +116,51 @@ const Lessons = () => {
   }, [courseId]);
 
   const loadExerciseCounts = async (lessonIds: string[]) => {
+    if (!lessonIds || lessonIds.length === 0) {
+      setExerciseCounts({});
+      return;
+    }
+
     try {
       const counts: Record<string, number> = {};
+      const { getSampleItemsByLesson } = await import("@/data/sampleContent");
       
       // Try Supabase first
       try {
-        const { data: items } = await supabase
+        const { data: items, error } = await supabase
           .from("items")
           .select("lesson_id")
           .in("lesson_id", lessonIds);
         
-        if (items && items.length > 0) {
+        // If we have items from Supabase, use them
+        if (!error && items && items.length > 0) {
           // Count items per lesson
           const itemCounts: Record<string, number> = {};
           items.forEach(item => {
             itemCounts[item.lesson_id] = (itemCounts[item.lesson_id] || 0) + 1;
           });
           
-          // Fill in counts, use 0 if no items found
+          // Fill in counts for all lessons, using sample data as fallback for missing ones
           lessonIds.forEach(id => {
-            counts[id] = itemCounts[id] || 0;
+            counts[id] = itemCounts[id] || getSampleItemsByLesson(id).length;
           });
         } else {
-          // No Supabase items, use sample data
-          const { getSampleItemsByLesson } = await import("@/data/sampleContent");
+          // No Supabase items or error, use sample data for all
           lessonIds.forEach(id => {
-            const items = getSampleItemsByLesson(id);
-            counts[id] = items.length;
+            const sampleItems = getSampleItemsByLesson(id);
+            counts[id] = sampleItems.length;
           });
         }
       } catch (supabaseError) {
-        // Supabase error, use sample data
-        const { getSampleItemsByLesson } = await import("@/data/sampleContent");
+        // Supabase error, use sample data for all
+        console.log("Using sample exercise data due to Supabase error:", supabaseError);
         lessonIds.forEach(id => {
-          const items = getSampleItemsByLesson(id);
-          counts[id] = items.length;
+          const sampleItems = getSampleItemsByLesson(id);
+          counts[id] = sampleItems.length;
         });
       }
       
+      console.log("Exercise counts loaded:", counts);
       setExerciseCounts(counts);
     } catch (error) {
       console.error("Error loading exercise counts:", error);
