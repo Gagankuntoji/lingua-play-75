@@ -10,7 +10,7 @@ import MultipleChoiceExercise from "@/components/exercises/MultipleChoiceExercis
 import TranslateExercise from "@/components/exercises/TranslateExercise";
 import FillBlankExercise from "@/components/exercises/FillBlankExercise";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getSampleItemsByLesson } from "@/data/sampleContent";
+import { getSampleItemsByLesson, sampleLessons } from "@/data/sampleContent";
 
 interface Item {
   id: string;
@@ -41,8 +41,15 @@ const LessonPlayer = () => {
   const [isFallback, setIsFallback] = useState(false);
 
   const loadItems = useCallback(async () => {
+    if (!lessonId) {
+      setLoading(false);
+      setItems([]);
+      return;
+    }
+
     setLoading(true);
     try {
+      // Try Supabase items first
       const { data, error } = await supabase
         .from("items")
         .select("*")
@@ -63,19 +70,83 @@ const LessonPlayer = () => {
         setItems(parsedItems);
         setIsFallback(false);
         console.log(`Loaded ${parsedItems.length} exercises from Supabase for lesson ${lessonId}`);
+        setLoading(false);
+        return;
+      }
+
+      // No Supabase items, use sample data
+      // First try direct match with lessonId
+      let sampleItems = getSampleItemsByLesson(lessonId);
+      
+      // If no direct match and lessonId looks like a UUID, try to find sample lesson by order
+      if (sampleItems.length === 0 && lessonId.includes('-') && lessonId.length > 30) {
+        // Try to get lesson info from Supabase to find order_index
+        const { data: lessonData } = await supabase
+          .from("lessons")
+          .select("order_index, course_id")
+          .eq("id", lessonId)
+          .single();
+        
+        if (lessonData) {
+          // Try to find sample lesson with matching order_index in any course
+          for (const courseLessons of Object.values(sampleLessons)) {
+            const matchingLesson = courseLessons.find(l => l.order_index === lessonData.order_index);
+            if (matchingLesson) {
+              sampleItems = getSampleItemsByLesson(matchingLesson.id);
+              if (sampleItems.length > 0) {
+                console.log(`Matched UUID lesson to sample lesson by order: ${matchingLesson.id}`);
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      // If still no items, use first available sample lesson with exercises
+      if (sampleItems.length === 0) {
+        console.log(`No direct match for lesson ${lessonId}, using first available sample exercises`);
+        for (const courseLessons of Object.values(sampleLessons)) {
+          for (const lesson of courseLessons) {
+            const items = getSampleItemsByLesson(lesson.id);
+            if (items.length > 0) {
+              sampleItems = items;
+              console.log(`Using exercises from sample lesson: ${lesson.id}`);
+              break;
+            }
+          }
+          if (sampleItems.length > 0) break;
+        }
+      }
+      
+      if (sampleItems.length > 0) {
+        setItems(sampleItems);
+        setIsFallback(true);
+        console.log(`Loaded ${sampleItems.length} sample exercises`);
       } else {
-        // No Supabase data or error, use sample data
-        throw new Error("No Supabase items, using sample data");
+        console.warn(`No exercises found for lesson ${lessonId}`);
+        setItems([]);
       }
     } catch (error) {
-      console.log("Loading sample exercises for lesson:", lessonId, error);
+      console.error("Error loading items:", error);
+      // Final fallback: try sample data directly
       const sampleItems = getSampleItemsByLesson(lessonId);
       if (sampleItems.length > 0) {
         setItems(sampleItems);
         setIsFallback(true);
-        console.log(`Loaded ${sampleItems.length} sample exercises for lesson ${lessonId}`);
       } else {
-        console.warn(`No exercises found for lesson ${lessonId}`);
+        // Try all sample lessons
+        for (const courseLessons of Object.values(sampleLessons)) {
+          for (const lesson of courseLessons) {
+            const items = getSampleItemsByLesson(lesson.id);
+            if (items.length > 0) {
+              setItems(items);
+              setIsFallback(true);
+              console.log(`Using fallback exercises from: ${lesson.id}`);
+              setLoading(false);
+              return;
+            }
+          }
+        }
         setItems([]);
       }
     } finally {
