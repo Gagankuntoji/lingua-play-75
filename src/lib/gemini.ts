@@ -11,16 +11,26 @@ interface GeminiResponse {
 /**
  * Call Gemini API (free alternative to ChatGPT)
  */
+const getGeminiApiKey = (): string | null => {
+  // First check localStorage (user-configured)
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('gemini_api_key');
+    if (stored) return stored;
+  }
+  // Fallback to environment variable
+  return import.meta.env.VITE_GEMINI_API_KEY || null;
+};
+
 export const callGemini = async (
   prompt: string,
   systemPrompt?: string
 ): Promise<GeminiResponse> => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   
   if (!apiKey) {
     return {
       message: '',
-      error: 'Gemini API key not configured. Please set VITE_GEMINI_API_KEY in your .env file. Get your free key from https://makersuite.google.com/app/apikey',
+      error: 'Gemini API key not configured. Please set it in your Profile settings or VITE_GEMINI_API_KEY in your .env file. Get your free key from https://makersuite.google.com/app/apikey',
     };
   }
 
@@ -151,7 +161,7 @@ export const getTTSFeedback = async (
   language: string,
   userRecordingUrl?: string
 ): Promise<GeminiResponse> => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   
   if (!apiKey) {
     return {
@@ -264,7 +274,7 @@ export const chatWithGemini = async (
   language?: string,
   topic?: string
 ): Promise<GeminiResponse> => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   
   if (!apiKey) {
     return {

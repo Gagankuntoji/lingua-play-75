@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { X, Check, Lightbulb } from "lucide-react";
+import { X, Check, Lightbulb, Video, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MultipleChoiceExercise from "@/components/exercises/MultipleChoiceExercise";
 import TranslateExercise from "@/components/exercises/TranslateExercise";
@@ -19,6 +19,7 @@ interface Item {
   correct_answer: string;
   options: string[] | null;
   audio_url: string | null;
+  video_url: string | null;
   explanation: string | null;
   hint?: string | null;
   order_index: number;
@@ -208,18 +209,57 @@ const LessonPlayer = () => {
             <div className="mb-8 space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-2xl font-bold">{currentItem.question}</h2>
-                {currentItem.hint && !showHint && !showFeedback && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => setShowHint(true)}
-                  >
-                    <Lightbulb className="w-4 h-4" />
-                    Hint
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {currentItem.video_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={() => {
+                        window.open(currentItem.video_url || '', '_blank');
+                      }}
+                    >
+                      <Video className="w-4 h-4" />
+                      Watch Video
+                    </Button>
+                  )}
+                  {currentItem.hint && !showHint && !showFeedback && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={() => setShowHint(true)}
+                    >
+                      <Lightbulb className="w-4 h-4" />
+                      Hint
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              {currentItem.video_url && (
+                <div className="rounded-lg overflow-hidden border-2 bg-muted/30">
+                  <div className="aspect-video">
+                    {currentItem.video_url.includes('youtube.com') || currentItem.video_url.includes('youtu.be') ? (
+                      <iframe
+                        src={currentItem.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title="Lesson Video"
+                      />
+                    ) : (
+                      <video
+                        src={currentItem.video_url}
+                        controls
+                        className="w-full h-full"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {showHint && currentItem.hint && (
                 <div className="p-4 border rounded-lg bg-muted/30 flex items-start gap-3">

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Lock, CheckCircle2, Circle, Info } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Circle, Info, BookOpen, Play } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getSampleCourseById, getSampleLessonsByCourse } from "@/data/sampleContent";
 
@@ -28,6 +28,7 @@ const Lessons = () => {
   const [profileXp, setProfileXp] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isFallback, setIsFallback] = useState(false);
+  const [exerciseCounts, setExerciseCounts] = useState<Record<string, number>>({});
 
   const loadData = useCallback(async () => {
     try {
@@ -82,6 +83,9 @@ const Lessons = () => {
           .map((record) => record.lesson_id) ?? []
       );
       setCompletedLessons(completedSet);
+      
+      // Load exercise counts for lessons
+      await loadExerciseCounts(lessonsRes.data?.map(l => l.id) || []);
     } catch (error) {
       console.log("Using sample lessons due to error or empty data:", error);
       const sampleCourse = getSampleCourseById(courseId);
@@ -96,6 +100,8 @@ const Lessons = () => {
       
       if (sampleLessons.length > 0) {
         setLessons(sampleLessons);
+        // Load exercise counts for sample lessons
+        await loadExerciseCounts(sampleLessons.map(l => l.id));
       } else {
         console.warn("No sample lessons found for course:", courseId);
         setLessons([]);
@@ -108,6 +114,59 @@ const Lessons = () => {
       setLoading(false);
     }
   }, [courseId]);
+
+  const loadExerciseCounts = async (lessonIds: string[]) => {
+    try {
+      const counts: Record<string, number> = {};
+      
+      // Try Supabase first
+      try {
+        const { data: items } = await supabase
+          .from("items")
+          .select("lesson_id")
+          .in("lesson_id", lessonIds);
+        
+        if (items && items.length > 0) {
+          // Count items per lesson
+          const itemCounts: Record<string, number> = {};
+          items.forEach(item => {
+            itemCounts[item.lesson_id] = (itemCounts[item.lesson_id] || 0) + 1;
+          });
+          
+          // Fill in counts, use 0 if no items found
+          lessonIds.forEach(id => {
+            counts[id] = itemCounts[id] || 0;
+          });
+        } else {
+          // No Supabase items, use sample data
+          const { getSampleItemsByLesson } = await import("@/data/sampleContent");
+          lessonIds.forEach(id => {
+            const items = getSampleItemsByLesson(id);
+            counts[id] = items.length;
+          });
+        }
+      } catch (supabaseError) {
+        // Supabase error, use sample data
+        const { getSampleItemsByLesson } = await import("@/data/sampleContent");
+        lessonIds.forEach(id => {
+          const items = getSampleItemsByLesson(id);
+          counts[id] = items.length;
+        });
+      }
+      
+      setExerciseCounts(counts);
+    } catch (error) {
+      console.error("Error loading exercise counts:", error);
+      // Final fallback to sample data
+      const { getSampleItemsByLesson } = await import("@/data/sampleContent");
+      const counts: Record<string, number> = {};
+      lessonIds.forEach(id => {
+        const items = getSampleItemsByLesson(id);
+        counts[id] = items.length;
+      });
+      setExerciseCounts(counts);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -197,9 +256,13 @@ const Lessons = () => {
                           <Lock className="w-6 h-6" />
                         )}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-lg font-bold">Lesson {lesson.order_index}</h3>
                         <p className="text-muted-foreground">{lesson.title}</p>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <BookOpen className="w-3 h-3" />
+                          <span>{exerciseCounts[lesson.id] || 0} exercises</span>
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">

@@ -26,6 +26,7 @@ export interface SampleLessonItem {
   explanation?: string | null;
   hint?: string | null;
   language_to?: string;
+  video_url?: string | null;
 }
 
 export const sampleCourses: SampleCourse[] = [
@@ -134,11 +135,12 @@ export const sampleLessonItems: Record<string, SampleLessonItem[]> = {
       lesson_id: "spanish-foundations-lesson-1",
       type: "multiple_choice",
       order_index: 1,
-      question: "How do you say “Good morning” in Spanish?",
+      question: "How do you say "Good morning" in Spanish?",
       correct_answer: "Buenos días",
       options: ["Buenas noches", "Buenos días", "Buenas tardes", "Hasta luego"],
-      explanation: "Buenos días literally means “good days” and is used before noon.",
+      explanation: "Buenos días literally means "good days" and is used before noon.",
       language_to: "Spanish",
+      video_url: "https://www.youtube.com/watch?v=jf65i7ZYoVY", // Sample Spanish greetings video
     },
     {
       id: "spanish-greetings-2",

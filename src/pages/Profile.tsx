@@ -2,19 +2,76 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Star, Flame, Trophy, Award } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Star, Flame, Trophy, Award, Key, Save, Eye, EyeOff } from "lucide-react";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({ totalLessons: 0, completedLessons: 0 });
   const [loading, setLoading] = useState(true);
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadProfile();
     loadStats();
+    loadApiKey();
   }, []);
+
+  const loadApiKey = () => {
+    // Load from localStorage (client-side only)
+    const stored = localStorage.getItem('gemini_api_key');
+    if (stored) {
+      setGeminiApiKey(stored);
+    } else {
+      // Check if set in env (for development)
+      const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (envKey) {
+        setGeminiApiKey(envKey);
+      }
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!geminiApiKey.trim()) {
+      toast({
+        title: "API Key required",
+        description: "Please enter your Gemini API key.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      // Store in localStorage
+      localStorage.setItem('gemini_api_key', geminiApiKey.trim());
+      
+      // Update the environment variable for current session
+      // Note: This won't persist across page reloads, but will work for current session
+      (window as any).__GEMINI_API_KEY__ = geminiApiKey.trim();
+      
+      toast({
+        title: "API Key saved!",
+        description: "Your Gemini API key has been saved. Refresh the page to use it.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error saving API key",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -122,6 +179,68 @@ const Profile = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* API Key Configuration */}
+        <Card className="border-2 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-primary" />
+              Gemini AI API Key
+            </CardTitle>
+            <CardDescription>
+              Configure your free Gemini API key for AI feedback and grammar correction
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="api-key">Gemini API Key</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="api-key"
+                  type={showApiKey ? "text" : "password"}
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  placeholder="Enter your Gemini API key"
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+                <Button onClick={handleSaveApiKey} disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Save className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+            <Alert>
+              <AlertDescription className="text-sm">
+                <strong>Get your free API key:</strong>
+                <ol className="list-decimal list-inside mt-2 space-y-1 ml-2">
+                  <li>Visit <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google AI Studio</a></li>
+                  <li>Sign in with your Google account</li>
+                  <li>Click "Create API Key"</li>
+                  <li>Copy and paste the key above</li>
+                </ol>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Your API key is stored locally in your browser and never sent to our servers.
+                </p>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
 
         {/* Achievements Section */}
         <Card className="border-2">
