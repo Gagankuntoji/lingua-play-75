@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import MultipleChoiceExercise from "@/components/exercises/MultipleChoiceExercise";
 import TranslateExercise from "@/components/exercises/TranslateExercise";
 import FillBlankExercise from "@/components/exercises/FillBlankExercise";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getSampleItemsByLesson } from "@/data/sampleContent";
 
 interface Item {
   id: string;
@@ -20,6 +22,7 @@ interface Item {
   explanation: string | null;
   hint?: string | null;
   order_index: number;
+  language_to?: string | null;
 }
 
 const LessonPlayer = () => {
@@ -34,6 +37,7 @@ const LessonPlayer = () => {
   const [loading, setLoading] = useState(true);
   const [xpEarned, setXpEarned] = useState(0);
   const [showHint, setShowHint] = useState(false);
+  const [isFallback, setIsFallback] = useState(false);
 
   const loadItems = useCallback(async () => {
     try {
@@ -45,7 +49,11 @@ const LessonPlayer = () => {
 
       if (error) throw error;
       
-      const parsedItems = (data || []).map(item => ({
+      if (!data || data.length === 0) {
+        throw new Error("No Supabase items");
+      }
+      
+      const parsedItems = data.map(item => ({
         ...item,
         options: item.options
           ? typeof item.options === "string"
@@ -55,8 +63,14 @@ const LessonPlayer = () => {
       }));
       
       setItems(parsedItems);
+      setIsFallback(false);
     } catch (error) {
       console.error("Error loading items:", error);
+      const sampleItems = getSampleItemsByLesson(lessonId);
+      if (sampleItems.length > 0) {
+        setItems(sampleItems);
+        setIsFallback(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -180,6 +194,14 @@ const LessonPlayer = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
+        {isFallback && (
+          <Alert className="mb-6">
+            <AlertDescription>
+              Using Gemini sample exercises until your Supabase lesson items are available.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="border-2 shadow-lg">
           <CardContent className="p-8">
             <div className="mb-8 space-y-4">
@@ -217,10 +239,13 @@ const LessonPlayer = () => {
 
               {currentItem.type === "translate" && (
                 <TranslateExercise
+                  question={currentItem.question}
+                  correctAnswer={currentItem.correct_answer}
                   answer={answer}
                   onChange={setAnswer}
                   showFeedback={showFeedback}
                   isCorrect={isCorrect}
+                  languageTo={currentItem.language_to || undefined}
                 />
               )}
 

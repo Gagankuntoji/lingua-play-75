@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mic, MicOff, Loader2, Check, X } from "lucide-react";
 import { useSpeechRecognition, getSpeechRecognitionLanguageCode } from "@/hooks/useSpeechRecognition";
-import { getSpeakingFeedback } from "@/lib/chatgpt";
+import { getSpeakingFeedbackGemini } from "@/lib/gemini";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SpeakingExerciseProps {
@@ -59,7 +59,7 @@ const SpeakingExercise = ({
     if (languageTo && userSpeech) {
       setIsLoadingFeedback(true);
       try {
-        const feedback = await getSpeakingFeedback(userSpeech, correctAnswer, languageTo);
+        const feedback = await getSpeakingFeedbackGemini(userSpeech, correctAnswer, languageTo);
         if (feedback.message && !feedback.error) {
           setChatGPTFeedback(feedback.message);
         } else if (feedback.error) {

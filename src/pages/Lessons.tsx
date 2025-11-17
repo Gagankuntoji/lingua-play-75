@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Lock, CheckCircle2, Circle, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getSampleCourseById, getSampleLessonsByCourse } from "@/data/sampleContent";
 
 interface Lesson {
   id: string;
@@ -25,6 +27,7 @@ const Lessons = () => {
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [profileXp, setProfileXp] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isFallback, setIsFallback] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -61,9 +64,15 @@ const Lessons = () => {
       if (profileRes.error) throw profileRes.error;
       if (progressRes.error) throw progressRes.error;
 
+      const hasLessons = !!lessonsRes.data?.length;
+      if (!courseRes.data || !hasLessons) {
+        throw new Error("No Supabase lesson data");
+      }
+
       setCourse(courseRes.data);
       setLessons(lessonsRes.data || []);
       setProfileXp(profileRes.data?.xp ?? 0);
+      setIsFallback(false);
 
       const completedSet = new Set(
         progressRes.data
@@ -73,6 +82,17 @@ const Lessons = () => {
       setCompletedLessons(completedSet);
     } catch (error) {
       console.error("Error loading lessons:", error);
+      const sampleCourse = getSampleCourseById(courseId);
+      const sampleLessons = getSampleLessonsByCourse(courseId);
+      if (sampleCourse) {
+        setCourse({ title: sampleCourse.title, flag_emoji: sampleCourse.flag_emoji });
+      }
+      if (sampleLessons.length > 0) {
+        setLessons(sampleLessons);
+      }
+      setIsFallback(true);
+      setProfileXp(0);
+      setCompletedLessons(new Set());
     } finally {
       setLoading(false);
     }
@@ -112,6 +132,14 @@ const Lessons = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
+        {isFallback && (
+          <Alert className="mb-6">
+            <AlertDescription>
+              Showing offline Gemini-powered lessons while Supabase data is unavailable.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Your Progress</h2>
           <Progress value={progressValue} className="h-3" />

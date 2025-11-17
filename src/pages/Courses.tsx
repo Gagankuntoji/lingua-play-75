@@ -4,20 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
+import { sampleCourses, SampleCourse } from "@/data/sampleContent";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  language_from: string;
-  language_to: string;
-  flag_emoji: string;
-}
+type Course = SampleCourse;
 
 const Courses = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFallback, setIsFallback] = useState(false);
 
   useEffect(() => {
     loadCourses();
@@ -31,9 +27,18 @@ const Courses = () => {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setCourses(data || []);
+
+      if (data && data.length > 0) {
+        setCourses(data);
+        setIsFallback(false);
+      } else {
+        setCourses(sampleCourses);
+        setIsFallback(true);
+      }
     } catch (error) {
       console.error("Error loading courses:", error);
+      setCourses(sampleCourses);
+      setIsFallback(true);
     } finally {
       setLoading(false);
     }
@@ -59,6 +64,14 @@ const Courses = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
+        {isFallback && (
+          <Alert className="mb-6">
+            <AlertDescription>
+              Showing sample courses powered by Gemini AI until your Supabase data is ready.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid gap-6 md:grid-cols-2">
           {courses.map((course) => (
             <Card

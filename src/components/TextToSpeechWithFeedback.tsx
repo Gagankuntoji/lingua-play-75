@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Volume2, Mic, MicOff, Loader2, Bot } from "lucide-react";
 import { useTextToSpeech, getLanguageCode } from "@/hooks/useTextToSpeech";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
-import { getTTSFeedback } from "@/lib/chatgpt";
+import { getTTSFeedback } from "@/lib/gemini";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TextToSpeechWithFeedbackProps {

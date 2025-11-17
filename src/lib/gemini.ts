@@ -228,6 +228,34 @@ Keep it concise (3-4 sentences).`;
   }
 };
 
+interface GrammarCorrectionParams {
+  answer: string;
+  correctAnswer: string;
+  question: string;
+  languageTo?: string;
+}
+
+export const getGrammarCorrection = async ({
+  answer,
+  correctAnswer,
+  question,
+  languageTo,
+}: GrammarCorrectionParams): Promise<GeminiResponse> => {
+  const target = languageTo || 'the target language';
+  const systemPrompt = `You are an encouraging ${target} grammar tutor. Highlight specific grammar wins and mistakes, correct the sentence, and give one actionable tip. Use simple Markdown bullets.`;
+
+  const prompt = `Question: ${question}
+Target answer: ${correctAnswer}
+Student answer: ${answer}
+
+1. Briefly state if the grammar is correct.
+2. Provide the corrected sentence.
+3. Explain the most important grammar adjustment in one sentence.
+4. Encourage the learner.`;
+
+  return callGemini(prompt, systemPrompt);
+};
+
 /**
  * Chat with Gemini AI assistant
  */
