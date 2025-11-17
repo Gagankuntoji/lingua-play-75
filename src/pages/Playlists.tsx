@@ -18,8 +18,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookMarked, Layers, Sparkles } from "lucide-react";
+import { BookMarked, Layers, Sparkles, Trash2, Mic, Bot, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { chatWithGemini } from "@/lib/gemini";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LessonOption {
   id: string;
@@ -65,6 +68,18 @@ const Playlists = () => {
   const [form, setForm] = useState({ title: "", description: "", focus_tag: "" });
   const [saving, setSaving] = useState(false);
   const [courseFilter, setCourseFilter] = useState<string>("all");
+  const [editingPlaylist, setEditingPlaylist] = useState<string | null>(null);
+  const [deletingPlaylist, setDeletingPlaylist] = useState<string | null>(null);
+  const [speechText, setSpeechText] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [geminiFeedback, setGeminiFeedback] = useState<string | null>(null);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  
+  const { isSupported: speechSupported, transcript, startListening, stopListening, reset } = useSpeechRecognition({
+    lang: "en-US",
+    continuous: false,
+    interimResults: true,
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -220,6 +235,94 @@ const Playlists = () => {
     }));
   }, [lessons]);
 
+  useEffect(() => {
+    if (transcript) {
+      setSpeechText(transcript);
+    }
+  }, [transcript]);
+
+  const handleSpeechToggle = () => {
+    if (!speechSupported) {
+      toast({
+        title: "Speech recognition not supported",
+        description: "Please use Chrome, Edge, or Safari for speech features.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isListening) {
+      stopListening();
+      setIsListening(false);
+    } else {
+      reset();
+      setSpeechText("");
+      startListening();
+      setIsListening(true);
+    }
+  };
+
+  const handleGetGeminiFeedback = async (text: string) => {
+    if (!text.trim()) {
+      toast({
+        title: "No text to analyze",
+        description: "Please enter or speak some text first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingFeedback(true);
+    setGeminiFeedback(null);
+    try {
+      const result = await chatWithGemini(
+        [{ role: "user", content: `Please provide feedback on this language learning text: "${text}". Give pronunciation tips, grammar corrections, and encouragement.` }],
+        "English"
+      );
+      if (result.message && !result.error) {
+        setGeminiFeedback(result.message);
+      } else {
+        toast({
+          title: "Error getting feedback",
+          description: result.error || "Failed to get AI feedback",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to get feedback",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
+
+  const handleDeletePlaylist = async (playlistId: string) => {
+    if (!confirm("Are you sure you want to delete this playlist?")) return;
+
+    try {
+      setDeletingPlaylist(playlistId);
+      const { error } = await supabase.from("playlists").delete().eq("id", playlistId);
+      if (error) throw error;
+
+      toast({
+        title: "Playlist deleted",
+        description: "The playlist has been removed.",
+      });
+      await loadData();
+    } catch (error) {
+      toast({
+        title: "Error deleting playlist",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingPlaylist(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -248,6 +351,86 @@ const Playlists = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
+        {/* Speech to Text & Gemini Feedback Section */}
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mic className="w-5 h-5 text-primary" />
+              Speech Practice with AI Feedback
+            </CardTitle>
+            <CardDescription>
+              Practice speaking and get instant feedback from Gemini AI
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Textarea
+                value={speechText}
+                onChange={(e) => setSpeechText(e.target.value)}
+                placeholder="Type or speak your text here..."
+                rows={3}
+                className="flex-1"
+              />
+              {speechSupported && (
+                <Button
+                  variant={isListening ? "destructive" : "outline"}
+                  size="icon"
+                  onClick={handleSpeechToggle}
+                  className="h-auto"
+                >
+                  {isListening ? <Mic className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
+                </Button>
+              )}
+            </div>
+            {isListening && (
+              <Alert>
+                <AlertDescription className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Listening... Speak now
+                </AlertDescription>
+              </Alert>
+            )}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleGetGeminiFeedback(speechText)}
+                disabled={!speechText.trim() || loadingFeedback}
+                className="flex-1"
+              >
+                {loadingFeedback ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Getting Feedback...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="w-4 h-4 mr-2" />
+                    Get AI Feedback
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSpeechText("");
+                  setGeminiFeedback(null);
+                  reset();
+                }}
+              >
+                Clear
+              </Button>
+            </div>
+            {geminiFeedback && (
+              <Alert>
+                <Bot className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>AI Feedback:</strong>
+                  <p className="mt-2">{geminiFeedback}</p>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-muted-foreground">
@@ -393,6 +576,18 @@ const Playlists = () => {
                   </Button>
                   <Button variant="ghost" disabled={!firstLesson} onClick={() => firstLesson && navigate(`/lesson/${firstLesson.id}`)}>
                     Resume
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeletePlaylist(playlist.id)}
+                    disabled={deletingPlaylist === playlist.id}
+                  >
+                    {deletingPlaylist === playlist.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
