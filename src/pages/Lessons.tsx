@@ -59,11 +59,13 @@ const Lessons = () => {
           : Promise.resolve({ data: [] }),
       ]);
 
+      // Check for errors first
       if (courseRes.error) throw courseRes.error;
       if (lessonsRes.error) throw lessonsRes.error;
-      if (profileRes.error) throw profileRes.error;
+      if (profileRes.error && profileRes.error.code !== 'PGRST116') throw profileRes.error; // PGRST116 = not found, which is OK
       if (progressRes.error) throw progressRes.error;
 
+      // Check if we have valid data, otherwise use fallback
       const hasLessons = !!lessonsRes.data?.length;
       if (!courseRes.data || !hasLessons) {
         throw new Error("No Supabase lesson data");
@@ -81,15 +83,24 @@ const Lessons = () => {
       );
       setCompletedLessons(completedSet);
     } catch (error) {
-      console.error("Error loading lessons:", error);
+      console.log("Using sample lessons due to error or empty data:", error);
       const sampleCourse = getSampleCourseById(courseId);
       const sampleLessons = getSampleLessonsByCourse(courseId);
+      
       if (sampleCourse) {
         setCourse({ title: sampleCourse.title, flag_emoji: sampleCourse.flag_emoji });
+      } else {
+        // If no sample course found, still try to show lessons
+        console.warn("No sample course found for:", courseId);
       }
+      
       if (sampleLessons.length > 0) {
         setLessons(sampleLessons);
+      } else {
+        console.warn("No sample lessons found for course:", courseId);
+        setLessons([]);
       }
+      
       setIsFallback(true);
       setProfileXp(0);
       setCompletedLessons(new Set());

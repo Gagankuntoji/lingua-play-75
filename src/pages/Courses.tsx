@@ -26,17 +26,22 @@ const Courses = () => {
         .select("*")
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.warn("Supabase error, using sample data:", error);
+        throw error;
+      }
 
-      if (data && data.length > 0) {
-        setCourses(data);
-        setIsFallback(false);
-      } else {
+      // Use sample data if Supabase returns empty or no data
+      if (!data || data.length === 0) {
+        console.log("No courses in Supabase, using sample data");
         setCourses(sampleCourses);
         setIsFallback(true);
+      } else {
+        setCourses(data);
+        setIsFallback(false);
       }
     } catch (error) {
-      console.error("Error loading courses:", error);
+      console.log("Using sample courses due to error:", error);
       setCourses(sampleCourses);
       setIsFallback(true);
     } finally {

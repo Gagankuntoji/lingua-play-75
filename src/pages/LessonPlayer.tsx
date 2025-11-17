@@ -49,6 +49,7 @@ const LessonPlayer = () => {
 
       if (error) throw error;
       
+      // If no data from Supabase, use sample data
       if (!data || data.length === 0) {
         throw new Error("No Supabase items");
       }
