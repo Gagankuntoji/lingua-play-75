@@ -5,6 +5,7 @@ export interface SampleCourse {
   language_from: string;
   language_to: string;
   flag_emoji: string;
+  video_url?: string;
 }
 
 export interface SampleLesson {
@@ -13,6 +14,7 @@ export interface SampleLesson {
   title: string;
   order_index: number;
   summary: string;
+  video_url?: string;
 }
 
 export interface SampleLessonItem {
@@ -37,6 +39,7 @@ export const sampleCourses: SampleCourse[] = [
     language_from: "English",
     language_to: "Spanish",
     flag_emoji: "🇪🇸",
+    video_url: "https://www.youtube.com/watch?v=E8Iu9s_nXhA",
   },
   {
     id: "french-travel",
@@ -45,6 +48,7 @@ export const sampleCourses: SampleCourse[] = [
     language_from: "English",
     language_to: "French",
     flag_emoji: "🇫🇷",
+    video_url: "https://www.youtube.com/watch?v=0V3G3hZ7i5g",
   },
   {
     id: "hindi-conversations",
@@ -53,6 +57,7 @@ export const sampleCourses: SampleCourse[] = [
     language_from: "English",
     language_to: "Hindi",
     flag_emoji: "🇮🇳",
+    video_url: "https://www.youtube.com/watch?v=E9xqEgrYSmY",
   },
 ];
 
@@ -64,6 +69,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "Greetings & Introductions",
       order_index: 1,
       summary: "Learn to introduce yourself and greet others politely.",
+      video_url: "https://www.youtube.com/watch?v=lnJX_n0w9wA",
     },
     {
       id: "spanish-foundations-lesson-2",
@@ -71,6 +77,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "Ordering Food",
       order_index: 2,
       summary: "Practice friendly requests in cafés and markets.",
+      video_url: "https://www.youtube.com/watch?v=GiFWCw63HgY",
     },
     {
       id: "spanish-foundations-lesson-3",
@@ -78,6 +85,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "Getting Around Town",
       order_index: 3,
       summary: "Ask for directions and understand simple answers.",
+      video_url: "https://www.youtube.com/watch?v=yN4HEwPScoQ",
     },
   ],
   "french-travel": [
@@ -87,6 +95,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "At the Café",
       order_index: 1,
       summary: "Order confidently and chat with baristas.",
+      video_url: "https://www.youtube.com/watch?v=btLm88S5wH4",
     },
     {
       id: "french-travel-lesson-2",
@@ -94,6 +103,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "Metro Navigation",
       order_index: 2,
       summary: "Buy tickets and ask for stops like a local.",
+      video_url: "https://www.youtube.com/watch?v=2rJW6DrM6i0",
     },
     {
       id: "french-travel-lesson-3",
@@ -101,6 +111,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "Meeting New Friends",
       order_index: 3,
       summary: "Break the ice and keep conversations flowing.",
+      video_url: "https://www.youtube.com/watch?v=FmNLJk6PFWw",
     },
   ],
   "hindi-conversations": [
@@ -110,6 +121,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "Introductions",
       order_index: 1,
       summary: "Introduce yourself and ask names politely.",
+      video_url: "https://www.youtube.com/watch?v=7WyQ2w_lJ2w",
     },
     {
       id: "hindi-conversations-lesson-2",
@@ -117,6 +129,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "Shopping Basics",
       order_index: 2,
       summary: "Negotiate prices and ask for sizes.",
+      video_url: "https://www.youtube.com/watch?v=pA3p8dkUBaE",
     },
     {
       id: "hindi-conversations-lesson-3",
@@ -124,6 +137,7 @@ export const sampleLessons: Record<string, SampleLesson[]> = {
       title: "Travel Plans",
       order_index: 3,
       summary: "Discuss destinations and transport options.",
+      video_url: "https://www.youtube.com/watch?v=qA0nhkkCm1k",
     },
   ],
 };
@@ -443,4 +457,22 @@ export const getSampleLessonsByCourse = (courseId?: string | null) =>
 
 export const getSampleItemsByLesson = (lessonId?: string | null) =>
   (lessonId && sampleLessonItems[lessonId]) || [];
+
+export const getSampleLessonById = (lessonId?: string | null) => {
+  if (!lessonId) return undefined;
+  for (const lessons of Object.values(sampleLessons)) {
+    const found = lessons.find((lesson) => lesson.id === lessonId);
+    if (found) return found;
+  }
+  return undefined;
+};
+
+export const getSampleLessonByOrderIndex = (orderIndex?: number) => {
+  if (orderIndex === undefined || orderIndex === null) return undefined;
+  for (const lessons of Object.values(sampleLessons)) {
+    const found = lessons.find((lesson) => lesson.order_index === orderIndex);
+    if (found) return found;
+  }
+  return undefined;
+};
 

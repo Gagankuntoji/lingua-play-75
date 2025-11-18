@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Lock, CheckCircle2, Circle, Info, BookOpen, Play } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Circle, Info, BookOpen, Play, Video } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getSampleCourseById, getSampleLessonsByCourse } from "@/data/sampleContent";
 
@@ -12,6 +12,8 @@ interface Lesson {
   id: string;
   title: string;
   order_index: number;
+  summary?: string | null;
+  video_url?: string | null;
 }
 
 interface Course {
@@ -132,8 +134,25 @@ const Lessons = () => {
         throw new Error("No Supabase lesson data");
       }
 
+      const sampleLessonsForCourse = getSampleLessonsByCourse(courseId);
+      const enrichedLessons =
+        lessonsRes.data?.map((lesson) => {
+          if (lesson.video_url && lesson.summary) return lesson;
+          const sampleMatch = sampleLessonsForCourse.find(
+            (sampleLesson) => sampleLesson.order_index === lesson.order_index
+          );
+          if (sampleMatch) {
+            return {
+              ...lesson,
+              summary: lesson.summary ?? sampleMatch.summary,
+              video_url: lesson.video_url ?? sampleMatch.video_url,
+            };
+          }
+          return lesson;
+        }) || [];
+
       setCourse(courseRes.data);
-      setLessons(lessonsRes.data || []);
+      setLessons(enrichedLessons);
       setProfileXp(profileRes.data?.xp ?? 0);
       setIsFallback(false);
 
@@ -266,10 +285,27 @@ const Lessons = () => {
                       <div className="flex-1">
                         <h3 className="text-lg font-bold">Lesson {lesson.order_index}</h3>
                         <p className="text-muted-foreground">{lesson.title}</p>
+                        {lesson.summary && (
+                          <p className="text-xs text-muted-foreground mt-1">{lesson.summary}</p>
+                        )}
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           <BookOpen className="w-3 h-3" />
                           <span>{exerciseCounts[lesson.id] || 0} exercises</span>
                         </div>
+                        {lesson.video_url && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2 flex items-center gap-2 px-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(lesson.video_url as string, "_blank");
+                            }}
+                          >
+                            <Video className="w-3 h-3" />
+                            Watch Lesson Video
+                          </Button>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">

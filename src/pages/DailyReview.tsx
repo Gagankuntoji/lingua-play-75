@@ -3,16 +3,44 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Brain, Calendar } from "lucide-react";
+import { ArrowLeft, Brain, Calendar, Clock, Flame } from "lucide-react";
+
+interface ProfileRecord {
+  id: string;
+  streak?: number | null;
+}
 
 const DailyReview = () => {
   const navigate = useNavigate();
   const [dueItems, setDueItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<ProfileRecord | null>(null);
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
     loadDueItems();
+    loadProfile();
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
   }, []);
+
+  const loadProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, streak")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error("Error loading profile:", error);
+    }
+  };
 
   const loadDueItems = async () => {
     try {
@@ -69,6 +97,32 @@ const DailyReview = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <Card className="border-2 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Today
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Date</p>
+              <p className="text-lg font-semibold">{now.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Time</p>
+              <p className="text-lg font-semibold">{now.toLocaleTimeString()}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Flame className="w-5 h-5 text-streak-fire" />
+              <div>
+                <p className="text-sm text-muted-foreground">Daily Streak</p>
+                <p className="text-lg font-semibold">{profile?.streak ?? 0} days</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-2 mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

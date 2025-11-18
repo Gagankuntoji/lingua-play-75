@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Plus, BookOpen, Play } from "lucide-react";
+import { ArrowLeft, Plus, BookOpen, Play, Video } from "lucide-react";
 import { sampleCourses, SampleCourse } from "@/data/sampleContent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -29,6 +29,7 @@ const Courses = () => {
     language_from: "English",
     language_to: "",
     flag_emoji: "🌍",
+    video_url: "",
   });
   const [exerciseCounts, setExerciseCounts] = useState<Record<string, number>>({});
 
@@ -55,7 +56,17 @@ const Courses = () => {
         setIsFallback(true);
         loadExerciseCounts(sampleCourses.map(c => c.id));
       } else {
-        setCourses(data);
+        const enrichedCourses = data.map((course) => {
+          if (course.video_url) return course;
+          const sampleMatch = sampleCourses.find(
+            (sampleCourse) => sampleCourse.language_to === course.language_to
+          );
+          return {
+            ...course,
+            video_url: course.video_url ?? sampleMatch?.video_url,
+          };
+        });
+        setCourses(enrichedCourses);
         setIsFallback(false);
         loadExerciseCounts(data.map(c => c.id));
       }
@@ -131,6 +142,7 @@ const Courses = () => {
           language_from: courseForm.language_from,
           language_to: courseForm.language_to,
           flag_emoji: courseForm.flag_emoji,
+          video_url: courseForm.video_url || null,
           created_by: user.id,
         })
         .select()
@@ -149,6 +161,7 @@ const Courses = () => {
         language_from: "English",
         language_to: "",
         flag_emoji: "🌍",
+        video_url: "",
       });
       setShowCreateDialog(false);
       await loadCourses();
@@ -237,6 +250,15 @@ const Courses = () => {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="video_url">Intro Video URL</Label>
+                  <Input
+                    id="video_url"
+                    value={courseForm.video_url}
+                    onChange={(e) => setCourseForm({ ...courseForm, video_url: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
@@ -296,6 +318,20 @@ const Courses = () => {
                   </div>
                   <Badge variant="secondary">{course.language_to}</Badge>
                 </div>
+                {course.video_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mb-4 flex items-center justify-center gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(course.video_url as string, "_blank");
+                    }}
+                  >
+                    <Video className="w-4 h-4" />
+                    Watch Intro Video
+                  </Button>
+                )}
                 <Button className="w-full" size="lg" onClick={() => navigate(`/courses/${course.id}/lessons`)}>
                   <Play className="w-4 h-4 mr-2" />
                   Start Learning

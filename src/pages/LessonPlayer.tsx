@@ -10,7 +10,12 @@ import MultipleChoiceExercise from "@/components/exercises/MultipleChoiceExercis
 import TranslateExercise from "@/components/exercises/TranslateExercise";
 import FillBlankExercise from "@/components/exercises/FillBlankExercise";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getSampleItemsByLesson, sampleLessons } from "@/data/sampleContent";
+import {
+  getSampleItemsByLesson,
+  sampleLessons,
+  getSampleLessonById,
+  getSampleLessonByOrderIndex,
+} from "@/data/sampleContent";
 
 interface Item {
   id: string;
@@ -42,21 +47,34 @@ const LessonPlayer = () => {
 
   const loadItems = useCallback(async () => {
     if (!lessonId) {
-      setLoading(false);
       setItems([]);
+      setLessonVideoUrl(null);
+      setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      // Try Supabase items first
+      let lessonMeta: { order_index?: number | null; video_url?: string | null } | null = null;
+      const { data: lessonData } = await supabase
+        .from("lessons")
+        .select("order_index, video_url")
+        .eq("id", lessonId)
+        .single();
+
+      if (lessonData) {
+        lessonMeta = lessonData;
+        setLessonVideoUrl(lessonData.video_url || null);
+      } else {
+        setLessonVideoUrl(null);
+      }
+
       const { data, error } = await supabase
         .from("items")
         .select("*")
         .eq("lesson_id", lessonId)
         .order("order_index", { ascending: true });
 
-      // If we have data from Supabase and no error, use it
       if (!error && data && data.length > 0) {
         const parsedItems = data.map(item => ({
           ...item,
@@ -66,88 +84,51 @@ const LessonPlayer = () => {
               : (item.options as string[])
             : null,
         }));
-        
+
         setItems(parsedItems);
         setIsFallback(false);
         console.log(`Loaded ${parsedItems.length} exercises from Supabase for lesson ${lessonId}`);
-        setLoading(false);
         return;
       }
 
-      // No Supabase items, use sample data
-      // First try direct match with lessonId
-      let sampleItems = getSampleItemsByLesson(lessonId);
-      
-      // If no direct match and lessonId looks like a UUID, try to find sample lesson by order
-      if (sampleItems.length === 0 && lessonId.includes('-') && lessonId.length > 30) {
-        // Try to get lesson info from Supabase to find order_index
-        const { data: lessonData } = await supabase
-          .from("lessons")
-          .select("order_index, course_id")
-          .eq("id", lessonId)
-          .single();
-        
-        if (lessonData) {
-          // Try to find sample lesson with matching order_index in any course
-          for (const courseLessons of Object.values(sampleLessons)) {
-            const matchingLesson = courseLessons.find(l => l.order_index === lessonData.order_index);
-            if (matchingLesson) {
-              sampleItems = getSampleItemsByLesson(matchingLesson.id);
-              if (sampleItems.length > 0) {
-                console.log(`Matched UUID lesson to sample lesson by order: ${matchingLesson.id}`);
-                break;
-              }
-            }
-          }
-        }
-      }
-      
-      // If still no items, use first available sample lesson with exercises
-      if (sampleItems.length === 0) {
-        console.log(`No direct match for lesson ${lessonId}, using first available sample exercises`);
+      let sampleLesson =
+        getSampleLessonById(lessonId) ||
+        getSampleLessonByOrderIndex(lessonMeta?.order_index || undefined);
+
+      if (!sampleLesson) {
         for (const courseLessons of Object.values(sampleLessons)) {
-          for (const lesson of courseLessons) {
-            const items = getSampleItemsByLesson(lesson.id);
-            if (items.length > 0) {
-              sampleItems = items;
-              console.log(`Using exercises from sample lesson: ${lesson.id}`);
-              break;
-            }
+          const candidate = courseLessons.find((lesson) => {
+            const exercises = getSampleItemsByLesson(lesson.id);
+            return exercises.length > 0;
+          });
+          if (candidate) {
+            sampleLesson = candidate;
+            break;
           }
-          if (sampleItems.length > 0) break;
         }
       }
-      
-      if (sampleItems.length > 0) {
+
+      if (sampleLesson) {
+        const sampleItems = getSampleItemsByLesson(sampleLesson.id);
         setItems(sampleItems);
+        setLessonVideoUrl(sampleLesson.video_url || lessonMeta?.video_url || null);
         setIsFallback(true);
-        console.log(`Loaded ${sampleItems.length} sample exercises`);
+        console.log(`Loaded ${sampleItems.length} sample exercises for lesson ${sampleLesson.id}`);
       } else {
         console.warn(`No exercises found for lesson ${lessonId}`);
         setItems([]);
+        setLessonVideoUrl(null);
       }
     } catch (error) {
       console.error("Error loading items:", error);
-      // Final fallback: try sample data directly
       const sampleItems = getSampleItemsByLesson(lessonId);
       if (sampleItems.length > 0) {
         setItems(sampleItems);
+        setLessonVideoUrl(getSampleLessonById(lessonId)?.video_url || null);
         setIsFallback(true);
       } else {
-        // Try all sample lessons
-        for (const courseLessons of Object.values(sampleLessons)) {
-          for (const lesson of courseLessons) {
-            const items = getSampleItemsByLesson(lesson.id);
-            if (items.length > 0) {
-              setItems(items);
-              setIsFallback(true);
-              console.log(`Using fallback exercises from: ${lesson.id}`);
-              setLoading(false);
-              return;
-            }
-          }
-        }
         setItems([]);
+        setLessonVideoUrl(null);
       }
     } finally {
       setLoading(false);
@@ -257,6 +238,7 @@ const LessonPlayer = () => {
 
   const currentItem = items[currentIndex];
   const progress = ((currentIndex + 1) / items.length) * 100;
+  const videoSource = currentItem.video_url || lessonVideoUrl;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
@@ -286,13 +268,13 @@ const LessonPlayer = () => {
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-2xl font-bold">{currentItem.question}</h2>
                 <div className="flex gap-2">
-                  {currentItem.video_url && (
+                  {videoSource && (
                     <Button
                       variant="outline"
                       size="sm"
                       className="flex items-center gap-2"
                       onClick={() => {
-                        window.open(currentItem.video_url || '', '_blank');
+                        window.open(videoSource || "", "_blank");
                       }}
                     >
                       <Video className="w-4 h-4" />
@@ -313,12 +295,14 @@ const LessonPlayer = () => {
                 </div>
               </div>
 
-              {currentItem.video_url && (
+              {videoSource && (
                 <div className="rounded-lg overflow-hidden border-2 bg-muted/30">
                   <div className="aspect-video">
-                    {currentItem.video_url.includes('youtube.com') || currentItem.video_url.includes('youtu.be') ? (
+                    {videoSource.includes("youtube.com") || videoSource.includes("youtu.be") ? (
                       <iframe
-                        src={currentItem.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                        src={videoSource
+                          .replace("watch?v=", "embed/")
+                          .replace("youtu.be/", "youtube.com/embed/")}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
@@ -326,7 +310,7 @@ const LessonPlayer = () => {
                       />
                     ) : (
                       <video
-                        src={currentItem.video_url}
+                        src={videoSource}
                         controls
                         className="w-full h-full"
                       >
