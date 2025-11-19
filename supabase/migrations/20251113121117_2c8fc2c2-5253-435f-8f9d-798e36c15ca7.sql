@@ -1,5 +1,5 @@
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable pgcrypto for UUID generation
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Create profiles table
 CREATE TABLE public.profiles (
@@ -43,7 +43,7 @@ CREATE TRIGGER on_auth_user_created
 
 -- Create courses table
 CREATE TABLE public.courses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
   language_from TEXT NOT NULL,
@@ -59,7 +59,7 @@ CREATE POLICY "Courses are viewable by everyone" ON public.courses
 
 -- Create lessons table
 CREATE TABLE public.lessons (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   order_index INTEGER NOT NULL,
@@ -73,7 +73,7 @@ CREATE POLICY "Lessons are viewable by everyone" ON public.lessons
 
 -- Create items table (exercise items)
 CREATE TABLE public.items (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lesson_id UUID NOT NULL REFERENCES public.lessons(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('multiple_choice', 'fill_blank', 'translate', 'reorder', 'listening', 'speaking')),
   question TEXT NOT NULL,
@@ -92,7 +92,7 @@ CREATE POLICY "Items are viewable by everyone" ON public.items
 
 -- Create user_item_state table (for spaced repetition - SM-2)
 CREATE TABLE public.user_item_state (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
   ease_factor DECIMAL DEFAULT 2.5,
@@ -117,7 +117,7 @@ CREATE POLICY "Users can update own item state" ON public.user_item_state
 
 -- Create exercise_attempts table
 CREATE TABLE public.exercise_attempts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
   user_answer TEXT NOT NULL,
@@ -136,7 +136,7 @@ CREATE POLICY "Users can insert own attempts" ON public.exercise_attempts
 
 -- Create user_progress table
 CREATE TABLE public.user_progress (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   lesson_id UUID NOT NULL REFERENCES public.lessons(id) ON DELETE CASCADE,
   xp_earned INTEGER DEFAULT 0,

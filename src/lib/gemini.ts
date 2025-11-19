@@ -8,79 +8,97 @@ interface GeminiResponse {
   error?: string;
 }
 
-/**
- * Call Gemini API (free alternative to ChatGPT)
- */
 const getGeminiApiKey = (): string | null => {
-  // First check localStorage (user-configured)
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('gemini_api_key');
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("gemini_api_key");
     if (stored) return stored;
   }
-  // Fallback to environment variable
   return import.meta.env.VITE_GEMINI_API_KEY || null;
+};
+
+const TEXT_MODELS = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-pro"];
+
+const buildPromptPayload = (text: string, maxOutputTokens = 500) => ({
+  contents: [
+    {
+      parts: [
+        {
+          text,
+        },
+      ],
+    },
+  ],
+  generationConfig: {
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.95,
+    maxOutputTokens,
+  },
+});
+
+const postToGemini = async (
+  apiKey: string,
+  payload: Record<string, unknown>,
+  models = TEXT_MODELS,
+): Promise<{ data?: any; error?: string }> => {
+  let lastError = "Unable to reach Gemini API.";
+
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { data };
+      }
+
+      const errorData = await response.json().catch(() => ({}));
+      lastError = errorData.error?.message || `API error (${model}): ${response.status}`;
+      if (response.status === 404) {
+        // try the next fallback model
+        continue;
+      }
+      return { error: lastError };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Failed to call Gemini API";
+    }
+  }
+
+  return { error: lastError };
+};
+
+const callGeminiWithPrompt = async (prompt: string, maxTokens = 500): Promise<GeminiResponse> => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    return {
+      message: "",
+      error:
+        "Gemini API key not configured. Please set it in your Profile settings or VITE_GEMINI_API_KEY in your .env file. Get your free key from https://makersuite.google.com/app/apikey",
+    };
+  }
+
+  const payload = buildPromptPayload(prompt, maxTokens);
+  const { data, error } = await postToGemini(apiKey, payload);
+  if (error) {
+    return { message: "", error };
+  }
+  const message = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  return { message: message.trim() };
 };
 
 export const callGemini = async (
   prompt: string,
-  systemPrompt?: string
+  systemPrompt?: string,
 ): Promise<GeminiResponse> => {
-  const apiKey = getGeminiApiKey();
-  
-  if (!apiKey) {
-    return {
-      message: '',
-      error: 'Gemini API key not configured. Please set it in your Profile settings or VITE_GEMINI_API_KEY in your .env file. Get your free key from https://makersuite.google.com/app/apikey',
-    };
-  }
-
-  try {
-    // Using Gemini 1.5 Flash (free tier, fast and efficient)
-    const model = 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-    const fullPrompt = systemPrompt 
-      ? `${systemPrompt}\n\nUser: ${prompt}\nAssistant:`
-      : prompt;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: fullPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 500,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        message: '',
-        error: errorData.error?.message || `API error: ${response.status}`,
-      };
-    }
-
-    const data = await response.json();
-    const message = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    return { message: message.trim() };
-  } catch (error) {
-    return {
-      message: '',
-      error: error instanceof Error ? error.message : 'Failed to call Gemini API',
-    };
-  }
+  const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+  return callGeminiWithPrompt(fullPrompt);
 };
 
 /**
@@ -159,25 +177,12 @@ export const getTranslationHelpGemini = async (
 export const getTTSFeedback = async (
   text: string,
   language: string,
-  userRecordingUrl?: string
+  userRecordingUrl?: string,
 ): Promise<GeminiResponse> => {
-  const apiKey = getGeminiApiKey();
-  
-  if (!apiKey) {
-    return {
-      message: '',
-      error: 'Gemini API key not configured.',
-    };
-  }
+  const systemPrompt = `You are a helpful ${language} pronunciation tutor. Provide detailed feedback on pronunciation, intonation, and clarity.`;
 
-  try {
-    const model = 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-    const systemPrompt = `You are a helpful ${language} pronunciation tutor. Provide detailed feedback on pronunciation, intonation, and clarity.`;
-
-    const prompt = userRecordingUrl
-      ? `The student is learning ${language}. They need to pronounce: "${text}"
+  const prompt = userRecordingUrl
+    ? `The student is learning ${language}. They need to pronounce: "${text}"
 
 They have recorded their attempt. Please provide:
 1. Pronunciation accuracy assessment
@@ -186,7 +191,7 @@ They have recorded their attempt. Please provide:
 4. Encouragement
 
 Keep it concise (3-4 sentences).`
-      : `The student is learning ${language}. They need to pronounce: "${text}"
+    : `The student is learning ${language}. They need to pronounce: "${text}"
 
 Please provide:
 1. Pronunciation guide (how to say it correctly)
@@ -196,46 +201,8 @@ Please provide:
 
 Keep it concise (3-4 sentences).`;
 
-    const fullPrompt = `${systemPrompt}\n\n${prompt}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: fullPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 300,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        message: '',
-        error: errorData.error?.message || `API error: ${response.status}`,
-      };
-    }
-
-    const data = await response.json();
-    const message = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    return { message: message.trim() };
-  } catch (error) {
-    return {
-      message: '',
-      error: error instanceof Error ? error.message : 'Failed to call Gemini API',
-    };
-  }
+  const fullPrompt = `${systemPrompt}\n\n${prompt}`;
+  return callGeminiWithPrompt(fullPrompt, 300);
 };
 
 interface GrammarCorrectionParams {
@@ -270,71 +237,21 @@ Student answer: ${answer}
  * Chat with Gemini AI assistant
  */
 export const chatWithGemini = async (
-  messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
   language?: string,
-  topic?: string
+  topic?: string,
 ): Promise<GeminiResponse> => {
-  const apiKey = getGeminiApiKey();
-  
-  if (!apiKey) {
-    return {
-      message: '',
-      error: 'Gemini API key not configured.',
-    };
-  }
+  const systemContext = language
+    ? `You are a helpful ${language} language tutor. ${
+        topic ? `The user is currently studying: ${topic}. ` : ""
+      }Provide clear, encouraging, and educational responses. Keep responses concise (2-4 sentences) unless the user asks for more detail.`
+    : `You are a helpful language learning assistant. Provide clear, encouraging, and educational responses.`;
 
-  try {
-    const model = 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const conversationText = messages
+    .map((msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
+    .join("\n\n");
 
-    const systemContext = language
-      ? `You are a helpful ${language} language tutor. ${topic ? `The user is currently studying: ${topic}. ` : ''}Provide clear, encouraging, and educational responses. Keep responses concise (2-4 sentences) unless the user asks for more detail.`
-      : `You are a helpful language learning assistant. Provide clear, encouraging, and educational responses.`;
-
-    // Build conversation context
-    const conversationText = messages
-      .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
-      .join('\n\n');
-
-    const fullPrompt = `${systemContext}\n\n${conversationText}\n\nAssistant:`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: fullPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 500,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        message: '',
-        error: errorData.error?.message || `API error: ${response.status}`,
-      };
-    }
-
-    const data = await response.json();
-    const message = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    return { message: message.trim() };
-  } catch (error) {
-    return {
-      message: '',
-      error: error instanceof Error ? error.message : 'Failed to call Gemini API',
-    };
-  }
+  const fullPrompt = `${systemContext}\n\n${conversationText}\n\nAssistant:`;
+  return callGeminiWithPrompt(fullPrompt);
 };
 

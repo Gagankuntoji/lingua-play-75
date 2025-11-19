@@ -43,8 +43,6 @@ const Home = () => {
       windowStart.setHours(0, 0, 0, 0);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayISO = today.toISOString().split("T")[0];
-
       const [profileRes, progressRes, completedCountRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single(),
         supabase
@@ -74,34 +72,7 @@ const Home = () => {
         return completedDate.toDateString() === today.toDateString() ? sum + (record.xp_earned ?? 0) : sum;
       }, 0);
       setTodayXp(todaysXpValue);
-
-      const rollingXp = progressData.reduce((sum, record) => sum + (record.xp_earned ?? 0), 0);
-
-      let goal = profileData?.daily_goal_xp ?? 30;
-      const lastAdjusted = profileData?.daily_goal_last_adjusted
-        ? new Date(profileData.daily_goal_last_adjusted)
-        : null;
-      const needsAdjustment = !lastAdjusted || lastAdjusted.toDateString() !== today.toDateString();
-
-      if (needsAdjustment) {
-        const avgPerDay = rollingXp / 7;
-        const originalGoal = goal;
-
-        if (avgPerDay > goal * 1.2) {
-          goal = Math.min(goal + 5, 120);
-        } else if (avgPerDay < goal * 0.5) {
-          goal = Math.max(goal - 5, 15);
-        }
-
-        if (goal !== originalGoal || !lastAdjusted || lastAdjusted.toDateString() !== today.toDateString()) {
-          await supabase
-            .from("profiles")
-            .update({ daily_goal_xp: goal, daily_goal_last_adjusted: todayISO })
-            .eq("id", user.id);
-        }
-      }
-
-      setDailyGoalXP(goal);
+      setDailyGoalXP(profileData?.daily_goal_xp ?? 30);
     } catch (error) {
       console.error("Error loading profile:", error);
     } finally {

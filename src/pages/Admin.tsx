@@ -6,6 +6,9 @@ import CourseManager from "@/components/admin/CourseManager";
 import LessonManager from "@/components/admin/LessonManager";
 import ItemManager from "@/components/admin/ItemManager";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
+import AdminSummaryCards from "@/components/admin/AdminSummaryCards";
+import BacklogHeatmap from "@/components/admin/BacklogHeatmap";
+import CurriculumToolbox from "@/components/admin/CurriculumToolbox";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -21,13 +24,18 @@ const Admin = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        <AdminSummaryCards />
+
+        <BacklogHeatmap />
+
         <Tabs defaultValue="courses" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="courses">Courses</TabsTrigger>
             <TabsTrigger value="lessons">Lessons</TabsTrigger>
             <TabsTrigger value="items">Exercises</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
           </TabsList>
 
           <TabsContent value="courses">
@@ -44,6 +52,10 @@ const Admin = () => {
 
           <TabsContent value="analytics">
             <AnalyticsDashboard />
+          </TabsContent>
+
+          <TabsContent value="curriculum">
+            <CurriculumToolbox />
           </TabsContent>
         </Tabs>
       </main>

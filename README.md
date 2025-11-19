@@ -167,16 +167,39 @@ bun run dev
 
 ## Environment Configuration
 
-Create a `.env` file at the repository root (Vite automatically loads `.env`, `.env.local`, etc.). Required variables:
+1. Copy the provided template and rename it to `.env.local` (ignored by git):
+   ```sh
+   cp env.example .env.local
+   ```
+2. Fill in the values:
 
-| Variable | Description |
-| --- | --- |
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public API key |
+| Variable | Required | Description |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL` | ✅ | Supabase project URL (e.g., `https://xyzcompany.supabase.co`) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | ✅ | Supabase anon/public API key |
+| `VITE_SUPABASE_PROJECT_ID` | ✅ | Supabase project reference (needed by the CLI + backend proxy) |
+| `VITE_GEMINI_API_KEY` | ✅ | Google Gemini API key for AI feedback (create one at [Google AI Studio](https://makersuite.google.com/app/apikey)) |
+| `VITE_BACKEND_URL` | Optional | URL for the Express auth proxy (`http://localhost:3333` locally) |
+| `VITE_OPENAI_API_KEY` | Optional | Only needed if you re-enable OpenAI-specific features |
 
-Optional: Configure additional Supabase or feature flags as needed (e.g., storage buckets, analytics endpoints).
+> **Tips**
+> - Restart `npm run dev` after changing env vars so Vite picks them up.
+> - The Profile page also lets each user store/override `VITE_GEMINI_API_KEY` in their own browser via localStorage.
+> - Never commit service-role Supabase keys or private Gemini/OpenAI keys to git.
 
-> **Security note:** The publishable key is safe for client distribution, but never commit service-role keys or secrets to the repo.
+---
+
+### Backend Auth Proxy (optional but recommended)
+- Lives in `server/index.js` (Express + Supabase Auth).
+- Endpoints:
+  - `GET /login` – server-rendered login page.
+  - `POST /api/login` / `POST /api/signup` – relay credentials to Supabase so you can authenticate outside the SPA.
+  - `GET /api/health` – quick readiness check.
+- Start it with `npm run server` or run it alongside Vite via `npm run dev:full`. Point the React app at it through `VITE_BACKEND_URL` (defaults to `http://localhost:3333`).
+
+### Sample data & Supabase seeding
+- After linking the Supabase CLI (`supabase link --project-ref <project-ref>`), run `supabase db push`. The new migration `20251118163000_seed_curated_content.sql` inserts the Spanish/French/Hindi demo courses, lessons, and exercises that shipped with the original prototype.
+- If you already pushed migrations before pulling this change, re-run `supabase db push` so the seed data is applied.
 
 ---
 
@@ -184,7 +207,9 @@ Optional: Configure additional Supabase or feature flags as needed (e.g., storag
 
 | Script | Description |
 | --- | --- |
-| `npm run dev` | Start the Vite development server |
+| `npm run dev` | Start only the Vite development server |
+| `npm run server` | Run the Express auth/login proxy (port 3333) |
+| `npm run dev:full` | Run backend + frontend together for local testing |
 | `npm run build` | Create a production build in `dist/` |
 | `npm run build:dev` | Production build with development mode (useful for staging) |
 | `npm run preview` | Preview the production build locally |

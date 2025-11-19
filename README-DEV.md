@@ -20,7 +20,9 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 Then you can use:
 ```bash
-npm run dev
+npm run dev         # frontend only
+npm run server      # backend auth proxy (optional)
+npm run dev:full    # run both together
 ```
 
 ## Method 4: Use Git Bash or WSL
@@ -31,8 +33,16 @@ npm run dev
 
 ---
 
+## Environment quick-start
+1. Copy `env.example` to `.env.local`.
+2. Fill in Supabase `URL` + `anon key` and your Gemini API key (from [Google AI Studio](https://makersuite.google.com/app/apikey)).
+3. Restart `npm run dev` so Vite reloads the variables.
+
+---
+
 ## Current Status
-- Server runs on: http://localhost:8080
+- Frontend: http://localhost:8080
+- Backend proxy: http://localhost:3333 (health check at /api/health)
 - Build tested: ✅ Working
 - Ready for deployment: ✅ Yes
 

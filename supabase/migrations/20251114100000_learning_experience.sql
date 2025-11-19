@@ -9,7 +9,7 @@ ALTER TABLE public.items
 
 -- Lesson playlists
 CREATE TABLE IF NOT EXISTS public.playlists (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.playlists (
 );
 
 CREATE TABLE IF NOT EXISTS public.playlist_lessons (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   playlist_id UUID NOT NULL REFERENCES public.playlists(id) ON DELETE CASCADE,
   lesson_id UUID NOT NULL REFERENCES public.lessons(id) ON DELETE CASCADE,
   order_index INTEGER DEFAULT 1,
